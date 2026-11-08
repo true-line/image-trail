@@ -45,6 +45,10 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+          # This short policy job needs no package-manager cache; keep
+          # setup-node's default caching off so zizmor's
+          # cache-poisoning audit is satisfied in this release workflow.
+          package-manager-cache: false
       - uses: true-line/trueline-agent-ci/.github/actions/ci-policy@8ec38da39c9b43af2181d1f5e5b7e09226c0bfad # zizmor: ignore[stale-action-refs]
         with:
           authorization-only: 'true'
