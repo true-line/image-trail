@@ -8,6 +8,7 @@ import {
 
 const STATIC_APPLICATION_ARTIFACTS = [
   'build-info.json',
+  'LICENSE',
   'manifest.json',
   'THIRD-PARTY-LICENSES.txt',
   'src/content/content-script.js',
