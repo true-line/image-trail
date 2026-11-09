@@ -33,5 +33,5 @@ updates:
       # dependencies. Their immutable commits advance only via the governed
       # harness sync with matching reviewed contract tests, and must never ride
       # Dependabot's catch-all action group (cf. qwts/overlook#1038).
-      - dependency-name: 'qwts/qwts-agent-ci/.github/actions/ci-policy'
-      - dependency-name: 'qwts/qwts-agent-ci/.github/actions/bounded-command'
+      - dependency-name: 'true-line/trueline-agent-ci/.github/actions/ci-policy'
+      - dependency-name: 'true-line/trueline-agent-ci/.github/actions/bounded-command'

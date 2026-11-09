@@ -2,9 +2,9 @@
 // dependencies we ship or build with, and how to read them out of an npm
 // lockfile. No filesystem or process access lives here so it stays unit-testable.
 
-// Permissive licenses compatible with shipping a proprietary, all-rights-reserved
-// extension. Add an identifier here only after confirming it imposes no copyleft
-// or source-disclosure obligation on the bundled artifact.
+// Permissive licenses for the extension's MIT-licensed dependencies. Add an
+// identifier here only after confirming it imposes no copyleft or
+// source-disclosure obligation on the bundled artifact.
 export const ALLOWED_LICENSES = new Set([
   '0BSD',
   'Apache-2.0',
@@ -147,11 +147,12 @@ const ATTRIBUTION_SEPARATOR = '='.repeat(78);
 // is byte-stable and can be committed and freshness-checked in CI.
 export function renderAttribution(bundledPackages) {
   const header = [
-    'Image Trail — Third-Party Software Notices',
+    'Image Trail by True Line AI LLC — Third-Party Software Notices',
     '',
-    'Image Trail itself is proprietary; see LICENSE. It bundles the third-party',
-    'packages listed below. Each is distributed under its own license, and the',
-    "full text of each package's license/copyright notice follows its entry.",
+    'Image Trail by True Line AI LLC is licensed under the MIT License; see',
+    'LICENSE. It bundles the third-party packages listed below. Each is',
+    "distributed under its own license, and the full text of each package's",
+    'license/copyright notice follows its entry.',
     '',
   ];
   const sorted = [...bundledPackages].sort((a, b) =>
