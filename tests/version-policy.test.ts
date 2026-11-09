@@ -260,7 +260,10 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   );
   const refreshStep = publishJob.slice(publishJob.indexOf('- name: Create or refresh the ready version PR'));
 
-  assert.match(prepareJob, /uses: qwts\/qwts-agent-ci\/\.github\/actions\/bounded-command@87c6b301057992f79a723f63c64624bf40c9d06a/u);
+  assert.match(
+    prepareJob,
+    /uses: true-line\/trueline-agent-ci\/\.github\/actions\/bounded-command@8ec38da39c9b43af2181d1f5e5b7e09226c0bfad/u,
+  );
   assert.match(prepareJob, /arguments-json: '\["ci"\]'/u);
   assert.match(prepareJob, /npm run changeset:version/u);
   assert.match(prepareJob, /actions\/upload-artifact@[0-9a-f]{40} # v7\.0\.1/u);
@@ -390,7 +393,7 @@ test('no workflow that carries repository automation credentials can reach a thi
     if (!workflow.includes('CHORES_DUMB_PRIVATE_KEY')) continue;
     const foreign = [...workflow.matchAll(/^\s*uses: (?<action>[^@\s]+)/gmu)]
       .map((match) => match.groups?.['action'] ?? '')
-      .filter((action) => !action.startsWith('actions/') && action !== 'qwts/qwts-agent-ci/.github/actions/bounded-command');
+      .filter((action) => !action.startsWith('actions/') && action !== 'true-line/trueline-agent-ci/.github/actions/bounded-command');
     assert.deepEqual(foreign, [], `${file} passes a third-party action into a credential-bearing workflow`);
   }
 });
@@ -514,7 +517,10 @@ test('release workflow checks out a supplied tag and publishes assets without st
   assert.match(workflow, /head_sha=\$source_sha/u);
   assert.match(workflow, /event=pull_request&head_sha=\$pr_head/u);
   assert.match(workflow, /\.name == "CI" and \.conclusion == "success"/u);
-  assert.match(workflow, /uses: qwts\/qwts-agent-ci\/\.github\/actions\/bounded-command@87c6b301057992f79a723f63c64624bf40c9d06a/u);
+  assert.match(
+    workflow,
+    /uses: true-line\/trueline-agent-ci\/\.github\/actions\/bounded-command@8ec38da39c9b43af2181d1f5e5b7e09226c0bfad/u,
+  );
   assert.match(workflow, /arguments-json: '\["playwright","install","--with-deps","chromium"\]'/u);
   assert.match(workflow, /run: npm run test:e2e:release/u);
   assert.match(workflow, /npm run package:release -- --tag/u);
