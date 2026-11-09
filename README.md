@@ -1,6 +1,6 @@
-# Image Trail
+# Image Trail by True Line AI LLC
 
-[![CI](https://github.com/qwts/image-trail/actions/workflows/ci.yml/badge.svg)](https://github.com/qwts/image-trail/actions/workflows/ci.yml)
+[![CI](https://github.com/true-line/image-trail/actions/workflows/ci.yml/badge.svg)](https://github.com/true-line/image-trail/actions/workflows/ci.yml)
 ![status: pre-release](https://img.shields.io/badge/status-pre--release-orange)
 ![install: source only](https://img.shields.io/badge/install-source%20only-blue)
 ![node: 24.18.0](https://img.shields.io/badge/node-24.18.0-339933)
@@ -8,7 +8,7 @@
 ![encrypted originals](https://img.shields.io/badge/originals-encrypted-6f42c1)
 ![pCloud backup](https://img.shields.io/badge/backup-pCloud-17a2b8)
 
-Image Trail is a Brave/Chromium extension for turning image URL structure into
+Image Trail by True Line AI LLC is a Brave/Chromium extension for turning image URL structure into
 navigable trails and local galleries. It lets the URL patterns already present
 on a site drive image progression, so you can recover images from hosted
 services or run your own web photo server without hardcoding one-off gallery
@@ -72,7 +72,7 @@ an unpacked extension in Brave or another Chromium browser:
 3. Choose **Load unpacked**.
 4. Select this repository's `extension/dist/` directory.
 
-The extension manifest currently identifies the extension as Image Trail and
+The extension manifest currently identifies the extension as Image Trail by True Line AI LLC and
 ships the built MV3 service worker/content-script bundle from `extension/dist/`.
 
 ## Documentation
@@ -87,7 +87,7 @@ Canonical documentation lives in source-controlled markdown under `docs/`:
 - [Acceptance Tests](docs/acceptance-tests/README.md)
 - [User Stories](docs/user-stories/README.md)
 - [Architecture Decision Records](docs/adr/README.md)
-- [Versioning automation planning](https://github.com/qwts/image-trail/issues/387)
+- [Versioning automation planning](https://github.com/true-line/image-trail/issues/387)
 
 ## Validation
 
@@ -114,9 +114,8 @@ the synthetic commit containing current `main`.
 
 ## Licensing
 
-Image Trail is proprietary, all-rights-reserved software. See [`LICENSE`](LICENSE)
-for the terms; no license to use, copy, modify, or distribute it is granted
-without prior written permission.
+Image Trail by True Line AI LLC is released under the [MIT License](LICENSE)
+(Copyright (c) 2026 True Line AI LLC).
 
 The extension bundles third-party open-source packages (react, react-dom, and
 their runtime dependencies), each under its own permissive license. Their
