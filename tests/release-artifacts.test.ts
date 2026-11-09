@@ -219,6 +219,9 @@ test('artifact allowlist is derived from the manifest plus explicit application 
   const manifest = manifestFixture();
   const expected = artifacts.expectedExtensionArtifacts(manifest);
   assert.ok(expected.includes('manifest.json'));
+  // The first-party MIT notice must ship inside the packaged extension so
+  // distributed copies carry the copyright and permission text.
+  assert.ok(expected.includes('LICENSE'));
   // Third-party attribution must ship inside the packaged extension.
   assert.ok(expected.includes('THIRD-PARTY-LICENSES.txt'));
   assert.ok(expected.includes('src/background/service-worker.js'));
