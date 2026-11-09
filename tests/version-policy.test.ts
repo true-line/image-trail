@@ -211,7 +211,7 @@ test('version-cut workflow refreshes a checked Changesets PR and tags only fresh
   // Branch, PR, and tag writes require a short-lived chores-dumb App token
   // because GITHUB_TOKEN events trigger no downstream workflow and
   // github-actions[bot] is not an authorized Actions actor here.
-  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.2\.0/u);
+  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.3\.0/u);
   assert.equal(workflow.match(/client-id: \$\{\{ secrets\.CHORES_DUMB_CLIENT_ID \}\}/gu)?.length, 2);
   assert.doesNotMatch(workflow, /\bapp-id:/u);
   assert.match(workflow, /GH_TOKEN: \$\{\{ steps\.chores\.outputs\.token \}\}/u);
@@ -266,11 +266,11 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   );
   assert.match(prepareJob, /arguments-json: '\["ci"\]'/u);
   assert.match(prepareJob, /npm run changeset:version/u);
-  assert.match(prepareJob, /actions\/upload-artifact@[0-9a-f]{40} # v7\.0\.1/u);
+  assert.match(prepareJob, /actions\/upload-artifact@[0-9a-f]{40} # v7\.0\.2/u);
   assert.doesNotMatch(prepareJob, /RELEASE_TOKEN|GH_TOKEN|contents: write|pull-requests: write/u);
 
   assert.match(publishJob, /needs: prepare-version-pr/u);
-  assert.match(publishJob, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.1/u);
+  assert.match(publishJob, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.2/u);
   assert.match(publishJob, /node "\$trusted_validator"/u);
   assert.match(publishJob, /git -c core\.hooksPath=\/dev\/null -c commit\.gpgsign=false commit/u);
   assert.match(publishJob, /git -c core\.hooksPath=\/dev\/null push/u);
@@ -457,7 +457,7 @@ test('zizmor is digest-pinned without a disallowed wrapper action and enforces t
 test('release builds do not consume dependency caches or interpolate the tag in shell source', () => {
   const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
 
-  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.2\.0/u);
+  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.3\.0/u);
   assert.match(workflow, /client-id: \$\{\{ secrets\.CHORES_DUMB_CLIENT_ID \}\}/u);
   assert.doesNotMatch(workflow, /\bapp-id:/u);
   assert.match(workflow, /GH_TOKEN: \$\{\{ steps\.chores\.outputs\.token \}\}/u);
