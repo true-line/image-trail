@@ -260,7 +260,10 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   );
   const refreshStep = publishJob.slice(publishJob.indexOf('- name: Create or refresh the ready version PR'));
 
-  assert.match(prepareJob, /uses: true-line\/trueline-agent-ci\/\.github\/actions\/bounded-command@87c6b301057992f79a723f63c64624bf40c9d06a/u);
+  assert.match(
+    prepareJob,
+    /uses: true-line\/trueline-agent-ci\/\.github\/actions\/bounded-command@8ec38da39c9b43af2181d1f5e5b7e09226c0bfad/u,
+  );
   assert.match(prepareJob, /arguments-json: '\["ci"\]'/u);
   assert.match(prepareJob, /npm run changeset:version/u);
   assert.match(prepareJob, /actions\/upload-artifact@[0-9a-f]{40} # v7\.0\.1/u);
@@ -514,7 +517,10 @@ test('release workflow checks out a supplied tag and publishes assets without st
   assert.match(workflow, /head_sha=\$source_sha/u);
   assert.match(workflow, /event=pull_request&head_sha=\$pr_head/u);
   assert.match(workflow, /\.name == "CI" and \.conclusion == "success"/u);
-  assert.match(workflow, /uses: true-line\/trueline-agent-ci\/\.github\/actions\/bounded-command@87c6b301057992f79a723f63c64624bf40c9d06a/u);
+  assert.match(
+    workflow,
+    /uses: true-line\/trueline-agent-ci\/\.github\/actions\/bounded-command@8ec38da39c9b43af2181d1f5e5b7e09226c0bfad/u,
+  );
   assert.match(workflow, /arguments-json: '\["playwright","install","--with-deps","chromium"\]'/u);
   assert.match(workflow, /run: npm run test:e2e:release/u);
   assert.match(workflow, /npm run package:release -- --tag/u);

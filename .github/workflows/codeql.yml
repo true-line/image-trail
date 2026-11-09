@@ -15,7 +15,7 @@ permissions: {}
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || '["self-hosted", "Linux", "X64"]') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       actions: read # CodeQL reads workflow metadata during analysis.
@@ -32,7 +32,6 @@ jobs:
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      # The organisation's Linux runner does not carry Node on its default PATH.
       # This step reaches for `node`, or runs an action that does, so the
       # runtime is installed first, with the same pinned action the rest of
       # the workflow already uses.
