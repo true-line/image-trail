@@ -92,13 +92,31 @@ test('canonical bare keys route surfaces and reset privacy-safe capture feedback
   await page.keyboard.press('c');
   await expectFeedback(page, 'Pinned — unlock encryption to store the original');
   await expect(page.locator('.image-trail-panel__capture-hint')).toHaveText('Pinned — unlock encryption to store the original');
+  // The panel's 1400ms dismissal timer starts when it shows the feedback, so
+  // measure from the moment it is visible: the first deadline falls at or
+  // before this moment plus 1400ms.
+  const firstShownAt = Date.now();
 
   await page.waitForTimeout(900);
   await page.keyboard.press('C');
   await expectFeedback(page, 'Pinned — unlock encryption to store the original');
-  await page.waitForTimeout(900);
-  await expect(page.locator(feedbackSelector)).toBeVisible();
-  await expect(page.locator(feedbackSelector)).toHaveCount(0, { timeout: 900 });
+  // The second press must have RESTARTED the timer, not merely shown the same
+  // text again. "It eventually goes away" cannot tell those apart: without a
+  // reset, the ORIGINAL timer would remove the feedback about 500ms after the
+  // second press and the test would still pass. So check the feedback is
+  // still there once the first timer's deadline has passed — between that
+  // deadline and the one a reset would create — and only then that it goes.
+  //
+  // The sample point is 300ms past the first deadline (the panel starts the
+  // timer no later than the moment the feedback was observed) and 600ms
+  // before the earliest deadline a reset could have set (the second press
+  // happened at least 900ms later, so a fresh 1400ms runs to at least
+  // firstShownAt + 2300).
+  const firstDeadlinePassed = firstShownAt + 1_400 + 300;
+  const waitUntilFirstDeadline = firstDeadlinePassed - Date.now();
+  if (waitUntilFirstDeadline > 0) await page.waitForTimeout(waitUntilFirstDeadline);
+  await expect(page.locator(feedbackSelector)).toHaveCount(1, { timeout: 500 });
+  await expect(page.locator(feedbackSelector)).toHaveCount(0, { timeout: 3_000 });
   await expect(page.locator('.image-trail-panel__capture-hint')).toHaveText('Press C to capture; hold Shift on Capture or press P to pin.');
 
   await page.keyboard.press('p');
