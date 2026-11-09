@@ -100,7 +100,7 @@ test('attribution renders deterministically, sorted, and embeds full notice text
   assert.equal(first, second);
   assert.ok(first.indexOf('react@19.2.7 — MIT') < first.indexOf('scheduler@0.27.0 — MIT'));
   assert.match(first, /REACT MIT TEXT/u);
-  assert.match(first, /proprietary; see LICENSE/u);
+  assert.match(first, /MIT License; see\s+LICENSE/u);
   // A package with no discoverable notice file still renders with a placeholder.
   assert.match(policy.renderAttribution([{ name: 'x', version: '1.0.0', license: 'MIT', notice: null }]), /No license file was found/u);
 });
