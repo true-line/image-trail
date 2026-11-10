@@ -11,11 +11,13 @@ import { BookmarksRepository, type EncryptedBookmarkRecord } from '../repositori
 import { EncryptedPinsRepository, type EncryptedPinRecord } from '../repositories/encrypted-pins-repository.js';
 import { KeysRepository } from '../repositories/keys-repository.js';
 import { BlobsRepository } from '../repositories/blobs-repository.js';
+import { moveSourceFingerprint } from './move-source-fingerprint.js';
 import type { DurableBookmarkPayloadV1, DurableEncryptedPinPayloadV1, DurableInteropRecordV1 } from '../types.js';
 
 export interface CanonicalRecordExport {
   readonly localId: string;
   readonly sourceUpdatedAt: string;
+  readonly sourceFingerprint: string;
   readonly record: InteropRecord;
   readonly albums: DurableInteropRecordV1['albums'];
   readonly reviewCategory: InteropReviewCategory;
@@ -271,6 +273,10 @@ export class InteropRecordExportStore {
         records.push({
           localId,
           sourceUpdatedAt: reviewedSource.envelope.updatedAt,
+          sourceFingerprint: await moveSourceFingerprint(
+            reviewedSource,
+            payload?.protectedPin?.encryptedPinId ? await encryptedPins.get(payload.protectedPin.encryptedPinId) : undefined,
+          ),
           record: interop.record,
           albums: interop.albums,
           reviewCategory: interop.reviewCategory,
