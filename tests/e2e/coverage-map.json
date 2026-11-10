@@ -1570,9 +1570,10 @@
             "tests/searchable-metadata-store.test.ts",
             "tests/url-metadata-privacy.test.ts",
             "tests/thumbnail-at-rest.test.ts",
-            "tests/dom/settings-view.test.ts"
+            "tests/dom/settings-view.test.ts",
+            "tests/dom/privacy-settings-view.test.ts"
           ],
-          "notes": "Covers the policy model (compatible URL/album defaults, encrypted-only thumbnails, URL index-key derivation, guards, and legacy local-settings sanitize), storage inspection proving locked-session thumbnail bytes stay inside an AES-GCM bookmark envelope, the durable store keeping the raw URL index under the default while an opt-in encrypted policy hashes only NEW records yet stays findable/dedupable by real URL, dual-encoding bookmark lookup, AES-GCM parsed-field and URL-review rows with opaque host/URL keys, bidirectional legacy reconciliation, stale writes, retention, clear filters, malformed-row redaction, settings-race serialization, and both Settings surfaces reporting the immutable encrypted thumbnail policy."
+          "notes": "Covers the policy model (compatible URL/album defaults, encrypted-only thumbnails, URL index-key derivation, guards, and legacy local-settings sanitize), storage inspection proving locked-session thumbnail bytes stay inside an AES-GCM bookmark envelope, the durable store keeping the raw URL index under the default while an opt-in encrypted policy hashes only NEW records yet stays findable/dedupable by real URL, dual-encoding bookmark lookup, AES-GCM parsed-field and URL-review rows with opaque host/URL keys, bidirectional legacy reconciliation, stale writes, retention, clear filters, malformed-row redaction, settings-race serialization, both Settings surfaces reporting the immutable encrypted thumbnail policy, and the Settings description stating that the encrypted mode is not password protection."
         },
         {
           "type": "playwright-e2e",

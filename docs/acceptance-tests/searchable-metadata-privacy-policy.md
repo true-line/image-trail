@@ -9,6 +9,7 @@ Purpose: prove that optional searchable metadata follows its configured at-rest 
 - Compatibility-path thumbnails live inside the AES-GCM bookmark relationship envelope encrypted by the durable non-extractable bookmark key.
 - Protected-pin thumbnails live in the blob-key-encrypted thumbnail repository.
 - A locked blob key may prevent protected storage and original-photo access, but it must never cause raw thumbnail bytes to be written to a plaintext IndexedDB field.
+- The `encrypted` mode is protection against casual reading of the profile's storage, not against someone who holds the profile: the durable bookmark and metadata keys are stored in the same IndexedDB, and the URL lookup key is an unsalted SHA-256 of the URL. Settings must say so and must not present this mode as password protection. Password protection applies to private pins and stored originals.
 - Legacy save requests containing `searchableMetadataPolicy.thumbnail: plaintext` are valid migration input and must persist as `encrypted`.
 
 ## Automated coverage
@@ -32,6 +33,7 @@ Purpose: prove that optional searchable metadata follows its configured at-rest 
 ## Expected result
 
 - No Settings surface claims thumbnails are plaintext.
+- The Searchable metadata description states that the encrypted mode is not password protection.
 - No locked or fallback save exposes raw thumbnail bytes at rest.
 - Legacy settings remain save-compatible but normalize immediately to the encrypted-only contract.
 - URL and album policy behavior, durable queue ordering, Recall, Recents, and original-photo encryption remain unchanged.

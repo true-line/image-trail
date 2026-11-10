@@ -191,6 +191,8 @@ test('Settings renders all groups and persists through the extension-owned servi
     assert.deepEqual(saved, [{ privacy: true, down: 'capture' }]);
     assert.match(root.textContent ?? '', /Settings saved/u);
     assert.match(root.textContent ?? '', /session-only active CryptoKey/u);
+    assert.match(privacyGroup?.textContent ?? '', /not protected by your encryption password/u);
+    assert.match(privacyGroup?.textContent ?? '', /Only private pins and stored originals are password-protected/u);
     const thumbnailPolicy = root.querySelector<HTMLSelectElement>('[aria-label="Thumbnail storage policy"]');
     assert.equal(thumbnailPolicy?.value, 'encrypted');
     assert.equal(thumbnailPolicy?.disabled, true);
