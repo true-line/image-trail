@@ -147,9 +147,9 @@ const ATTRIBUTION_SEPARATOR = '='.repeat(78);
 // is byte-stable and can be committed and freshness-checked in CI.
 export function renderAttribution(bundledPackages) {
   const header = [
-    'Image Trail by True Line AI LLC — Third-Party Software Notices',
+    'Image Trail — Third-Party Software Notices',
     '',
-    'Image Trail by True Line AI LLC is licensed under the MIT License; see',
+    'Image Trail is licensed under the MIT License; see',
     'LICENSE. It bundles the third-party packages listed below. Each is',
     "distributed under its own license, and the full text of each package's",
     'license/copyright notice follows its entry.',

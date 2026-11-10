@@ -13,7 +13,7 @@ ships in the exact upload package.
 
 | Dashboard field   | Submission value                                                                                                                           |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name              | Image Trail by True Line AI LLC                                                                                                            |
+| Name              | Image Trail                                                                                                                                |
 | Summary           | Turn image URL patterns into navigable trails, durable galleries, encrypted captures, and recoverable backups.                             |
 | Category          | Photos                                                                                                                                     |
 | Language          | English                                                                                                                                    |
@@ -107,7 +107,7 @@ The full public policy is [Privacy And Permissions Review](../privacy-and-permis
 
 ## Reviewer instructions (no private credentials)
 
-1. Install the supplied ZIP as an unpacked extension and pin **Image Trail by True Line AI LLC**.
+1. Install the supplied ZIP as an unpacked extension and pin **Image Trail**.
 2. Open a public page containing images, then invoke the toolbar action. The
    Image Trail panel should appear only after this gesture.
 3. On a page with several images, use **Set host image** and choose one image.
