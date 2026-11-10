@@ -1,5 +1,15 @@
 # image-trail
 
+## 0.27.7
+
+### Patch Changes
+
+- d6f3e9a: Saving a pin no longer undoes a Recall or drops a captured original that another save attached at the same moment. Pin saves, Recall moves, and removals now take turns instead of overwriting each other.
+- ff5e859: In experimental Transfer & Sync builds, a Move no longer deletes the source record when it was edited or gained a captured original after review; finalization now stops instead.
+- 108796d: Saving a pin now reports a failure when Image Trail storage cannot be opened instead of appearing to succeed, and a failed storage open is retried on the next action.
+- 770114f: Encrypted storage setup now saves the new key before unlocking and refuses to replace an existing key, restoring a backup keeps originals that are already stored instead of overwriting them, and orphan cleanup deletes nothing while any bookmark record is unreadable.
+- 26cca37: Unlocking encrypted storage now tries every stored key and prefers this device's own key, so importing another device's key backup no longer locks you out of your local private pins and originals.
+
 ## 0.27.6
 
 ### Patch Changes
