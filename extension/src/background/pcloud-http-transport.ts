@@ -103,7 +103,8 @@ export class PCloudHttpTransport {
         ...(encoded
           ? {
               mode: 'cors' as const,
-              credentials: 'include' as const,
+              // The access token in the body authenticates the call. The user's pCloud web cookies are never sent.
+              credentials: 'omit' as const,
               referrer: this.options.referrer,
               referrerPolicy: 'origin' as const,
               headers: {
