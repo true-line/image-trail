@@ -1,6 +1,6 @@
 import type { ImageDisplayRecord } from '../core/display-records.js';
 import { createDisplayRecord } from '../core/display-records.js';
-import type { BookmarkSaveOptions } from '../core/bookmark-save-options.js';
+import { PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE, type BookmarkSaveOptions } from '../core/bookmark-save-options.js';
 import type { StorageUsageSummary } from '../core/image/capture-result.js';
 import {
   bookmarkSearchIndexKey,
@@ -170,7 +170,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     const keepPrivate = options.requireEncrypted === true || !!protectedPin;
     if (keepPrivate && !activeBlobKey) {
       // A pin that is, or must be, private never gets a plaintext copy while the key is away.
-      if (!protectedPin) throw new BookmarkPersistenceError('Unlock encryption to restore this private pin.', false);
+      if (!protectedPin) throw new BookmarkPersistenceError(PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE, false);
       return this.lockedPrivatePin(context, protectedPin.plainPinId, bookmark);
     }
     if (activeBlobKey && (keepPrivate || preference !== 'plaintext')) {

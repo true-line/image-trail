@@ -5,9 +5,14 @@ import { openImageTrailDb } from '../extension/src/data/db.js';
 import { BookmarksRepository } from '../extension/src/data/repositories/bookmarks-repository.js';
 import { createAndActivateWrappedBlobKey, lockBlobKey, type ActiveBlobKey } from '../extension/src/data/crypto/blob-keyring.js';
 import { IndexedDbBookmarkStore } from '../extension/src/data/bookmarks-controller.js';
+import { PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE } from '../extension/src/core/bookmark-save-options.js';
 import { createDisplayRecord } from '../extension/src/core/display-records.js';
 import { bookmarkRecordToExportEntry } from '../extension/src/ui/panel/record-export-helpers.js';
-import { lockedPrivatePinsMessage, restoreBookmarkEntries } from '../extension/src/ui/panel/restore-import-preview.js';
+import {
+  createRestoreDuplicateSummary,
+  privatePinsNotRestoredMessage,
+  restoreBookmarkEntries,
+} from '../extension/src/ui/panel/restore-import-preview.js';
 import { deleteImageTrailDb } from './indexeddb-test-helpers.js';
 
 const URL_A = 'https://secret.example.test/private-a.jpg';
@@ -89,6 +94,7 @@ test('export marks private pins and restore refuses to save them without encrypt
   assert.equal(privateEntry.payload.protectedPin?.plainPinId, 'plain-1');
   assert.equal(plainEntry.payload.protectedPin, undefined);
 
+  let saveFailure: string = PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE;
   const calls: { url: string; requireEncrypted: boolean }[] = [];
   const lockedStore = {
     save: async (record: ReturnType<typeof pin>) => {
@@ -97,19 +103,50 @@ test('export marks private pins and restore refuses to save them without encrypt
     },
     saveResult: async (record: ReturnType<typeof pin>, options?: { requireEncrypted?: boolean | undefined }) => {
       calls.push({ url: record.url, requireEncrypted: options?.requireEncrypted === true });
-      return { ok: false as const, message: 'locked' };
+      return { ok: false as const, message: saveFailure };
     },
   };
   const ids = new Map<string, string>();
   const outcome = await restoreBookmarkEntries(lockedStore, [privateEntry, plainEntry], ids);
 
-  assert.deepEqual(outcome, { importedCount: 1, lockedPrivateCount: 1 });
+  assert.deepEqual(outcome, { importedCount: 1, lockedPrivateCount: 1, failedPrivateCount: 0 });
   assert.deepEqual(calls, [
     { url: URL_A, requireEncrypted: true },
     { url: 'https://example.test/plain.jpg', requireEncrypted: false },
   ]);
   assert.deepEqual([...ids.values()], ['saved-plain']);
-  assert.equal(lockedPrivatePinsMessage(0), '');
-  assert.match(lockedPrivatePinsMessage(1), /1 private pin was not restored/u);
-  assert.match(lockedPrivatePinsMessage(2), /2 private pins were not restored/u);
+
+  saveFailure = 'Bookmark storage is unavailable.';
+  const storageFailure = await restoreBookmarkEntries(lockedStore, [privateEntry], new Map());
+  assert.deepEqual(storageFailure, { importedCount: 0, lockedPrivateCount: 0, failedPrivateCount: 1 });
+
+  assert.equal(privatePinsNotRestoredMessage({ lockedPrivateCount: 0, failedPrivateCount: 0 }), '');
+  assert.match(
+    privatePinsNotRestoredMessage({ lockedPrivateCount: 1, failedPrivateCount: 0 }),
+    /1 private pin was not restored because encryption is locked/u,
+  );
+  const both = privatePinsNotRestoredMessage({ lockedPrivateCount: 2, failedPrivateCount: 1 });
+  assert.match(both, /2 private pins were not restored because encryption is locked/u);
+  assert.match(both, /1 private pin was not restored because encrypted storage failed/u);
+});
+
+test('a private pin in the backup is not skipped as a duplicate of an unencrypted local copy', () => {
+  const privateEntry = bookmarkRecordToExportEntry({
+    ...pin(URL_A),
+    protectedPin: { plainPinId: 'plain-1', hasEncryptedMetadata: true, hasEncryptedThumbnail: false, hasStoredOriginal: false },
+  });
+  const plainEntry = bookmarkRecordToExportEntry(pin('https://example.test/plain.jpg'));
+  const localPlainCopies = [
+    { ...pin(URL_A), id: 'local-a' },
+    { ...pin('https://example.test/plain.jpg'), id: 'local-plain' },
+  ];
+
+  const againstPlaintext = createRestoreDuplicateSummary([privateEntry, plainEntry], localPlainCopies);
+  assert.deepEqual(againstPlaintext.uniqueEntries, [privateEntry], 'the private entry still goes through the encrypted save');
+  assert.equal(againstPlaintext.duplicateCount, 1);
+
+  const localPrivate = { ...localPlainCopies[0]!, protectedPin: privateEntry.payload.protectedPin };
+  const againstPrivate = createRestoreDuplicateSummary([privateEntry], [localPrivate]);
+  assert.deepEqual(againstPrivate.uniqueEntries, []);
+  assert.equal(againstPrivate.duplicateCount, 1, 'an existing private pin is an ordinary duplicate');
 });

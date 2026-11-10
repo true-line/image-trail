@@ -17,7 +17,7 @@ import {
 } from '../../content/panel-services.js';
 import {
   bookmarkEntriesOriginalReferenceCount,
-  lockedPrivatePinsMessage,
+  privatePinsNotRestoredMessage,
   restoreBookmarkEntries,
   createBookmarksRestorePreview,
   createHistoryRestorePreview,
@@ -272,7 +272,7 @@ export class RecallRestoreController {
       return false;
     }
     const recordIdMap = new Map(duplicateRecordIdsByUuid);
-    const { importedCount, lockedPrivateCount } = await restoreBookmarkEntries(bookmarkStore, result.entries, recordIdMap);
+    const { importedCount, ...privateCounts } = await restoreBookmarkEntries(bookmarkStore, result.entries, recordIdMap);
     const albumRestore = await this.restoreFullBackupAlbums(result, recordIdMap);
     await this.deps.loadBookmarkPage(0, { render: false });
     this.deps.setState(
@@ -289,7 +289,7 @@ export class RecallRestoreController {
               ? fullBackupRestoreDetail(fullBackupOriginalRestore.importedOriginalCount)
               : 'encrypted into bookmark storage',
           ) +
-          lockedPrivatePinsMessage(lockedPrivateCount) +
+          privatePinsNotRestoredMessage(privateCounts) +
           albumRestoreCompleteMessage(albumRestore),
       }),
     );

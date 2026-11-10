@@ -1,4 +1,5 @@
 import { createDisplayRecord, type ImageDisplayRecord } from '../../core/display-records.js';
+import { PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE } from '../../core/bookmark-save-options.js';
 import type { BookmarkStore } from '../../core/bookmark-store.js';
 import type { ImportRestorePreviewState } from '../../core/types.js';
 import {
@@ -44,12 +45,20 @@ export function createRestoreDuplicateSummary<TEntry extends RestoreImageImportE
     sha256: restoreSha256FromUnknown(record),
   }));
   const classifications = classifyRestoreDuplicates(candidates, existing);
+  const privateExistingIds = new Set(existingRecords.filter((record) => record.protectedPin).map((record) => record.id));
   const matchesByUuid = new Map<string, RestoreDuplicateMatch>();
   const duplicateRecordIdsByUuid = new Map<string, string>();
   const uniqueEntries: TEntry[] = [];
 
   for (const classification of classifications) {
-    if (classification.duplicate) {
+    // A pin that was private in the backup is not a duplicate of an unencrypted local copy:
+    // it goes through the encrypted save, which converts that copy instead of leaving it.
+    const upgradesPlaintextCopy =
+      !!classification.duplicate &&
+      'protectedPin' in classification.candidate.entry.payload &&
+      !!classification.candidate.entry.payload.protectedPin &&
+      !privateExistingIds.has(classification.duplicate.existingId);
+    if (classification.duplicate && !upgradesPlaintextCopy) {
       matchesByUuid.set(classification.candidate.entry.uuid, classification.duplicate.matchedBy);
       duplicateRecordIdsByUuid.set(classification.candidate.entry.uuid, classification.duplicate.existingId);
     } else {
@@ -299,25 +308,41 @@ export function bookmarkPayloadToDisplayRecord(uuid: string, payload: DurableBoo
   });
 }
 
+type PrivateRestoreOutcome = ImageDisplayRecord | 'locked' | 'failed';
+
 /**
  * Saves one restored bookmark. A pin that was private in the backup is saved encrypted or not
- * at all: returns null when it could not be, so the caller can report it instead of leaving a
- * plaintext copy behind.
+ * at all, and the reason is kept so the caller can report a locked key and a storage failure
+ * differently instead of leaving a plaintext copy behind.
  */
 async function restoreBookmarkEntry(
   store: Pick<BookmarkStore, 'save' | 'saveResult'>,
   entry: { readonly uuid: string; readonly payload: DurableBookmarkPayloadV1 },
-): Promise<ImageDisplayRecord | null> {
+): Promise<PrivateRestoreOutcome> {
   const record = bookmarkPayloadToDisplayRecord(entry.uuid, entry.payload);
   if (!entry.payload.protectedPin) return store.save(record);
-  if (!store.saveResult) return null;
+  if (!store.saveResult) return 'failed';
   const result = await store.saveResult(record, { requireEncrypted: true });
-  return result.ok ? result.record : null;
+  if (result.ok) return result.record;
+  return result.message === PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE ? 'locked' : 'failed';
 }
 
-export function lockedPrivatePinsMessage(count: number): string {
-  if (count === 0) return '';
-  return ` ${count} private pin${count === 1 ? ' was' : 's were'} not restored because encryption is locked. Unlock and restore the file again.`;
+export interface PrivateRestoreCounts {
+  readonly lockedPrivateCount: number;
+  readonly failedPrivateCount: number;
+}
+
+export function privatePinsNotRestoredMessage(counts: PrivateRestoreCounts): string {
+  const pins = (count: number): string => `${count} private pin${count === 1 ? ' was' : 's were'} not restored`;
+  const locked =
+    counts.lockedPrivateCount > 0
+      ? ` ${pins(counts.lockedPrivateCount)} because encryption is locked. Unlock and restore the file again.`
+      : '';
+  const failed =
+    counts.failedPrivateCount > 0
+      ? ` ${pins(counts.failedPrivateCount)} because encrypted storage failed. Nothing was saved unencrypted; restore the file again.`
+      : '';
+  return locked + failed;
 }
 
 /** Restores every entry, recording new ids in `recordIdMap` and counting private pins left out. */
@@ -325,17 +350,18 @@ export async function restoreBookmarkEntries(
   store: Pick<BookmarkStore, 'save' | 'saveResult'>,
   entries: readonly { readonly uuid: string; readonly payload: DurableBookmarkPayloadV1 }[],
   recordIdMap: Map<string, string>,
-): Promise<{ readonly importedCount: number; readonly lockedPrivateCount: number }> {
+): Promise<PrivateRestoreCounts & { readonly importedCount: number }> {
   let importedCount = 0;
   let lockedPrivateCount = 0;
+  let failedPrivateCount = 0;
   for (const entry of entries) {
     const saved = await restoreBookmarkEntry(store, entry);
-    if (saved) {
+    if (saved === 'locked') lockedPrivateCount += 1;
+    else if (saved === 'failed') failedPrivateCount += 1;
+    else {
       recordIdMap.set(entry.uuid, saved.id);
       importedCount += 1;
-    } else {
-      lockedPrivateCount += 1;
     }
   }
-  return { importedCount, lockedPrivateCount };
+  return { importedCount, lockedPrivateCount, failedPrivateCount };
 }

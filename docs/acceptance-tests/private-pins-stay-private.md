@@ -9,6 +9,9 @@ Purpose: verify that a pin stored as private is never written again as an unencr
 - Bookmark exports and backups mark which pins were private.
 - Restore saves a marked pin encrypted regardless of the pin storage setting. If encryption is locked, the pin is left out and the completion message says how many were not restored and to unlock and restore again.
 
+- A marked pin whose URL already exists locally as an unencrypted pin is not skipped as a duplicate: restore saves it encrypted, converting the local copy. A local pin that is already private is an ordinary duplicate.
+- When a marked pin cannot be saved, the message distinguishes a locked key from an encrypted-storage failure. In both cases nothing is saved unencrypted.
+
 ## Manual Acceptance
 
 1. Unlock encryption, set pin storage to encrypted, and pin image A.
@@ -20,7 +23,7 @@ Purpose: verify that a pin stored as private is never written again as an unencr
 
 ## Automated Coverage
 
-- `tests/indexeddb-private-pin-custody.test.ts`: locked re-pin writes no second row; a required-encrypted save fails while locked and ignores the plaintext preference when unlocked; export marks private pins; restore skips and counts them when the store cannot encrypt.
+- `tests/indexeddb-private-pin-custody.test.ts`: locked re-pin writes no second row; a required-encrypted save fails while locked and ignores the plaintext preference when unlocked; export marks private pins; restore skips and counts them when the store cannot encrypt, separates locked from failed saves, and does not treat an unencrypted local copy as a duplicate of a private pin.
 
 ## Expected Result
 
