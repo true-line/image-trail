@@ -183,7 +183,7 @@ the rolling PR, or creates the missing tag; if the tag already exists without a
 release, it dispatches Release with that tag.
 
 ```sh
-gh api --method POST repos/qwts/image-trail/dispatches \
+gh api --method POST repos/true-line/image-trail/dispatches \
   -f event_type=version-cut-recovery
 ```
 
