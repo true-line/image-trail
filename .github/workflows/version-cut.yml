@@ -175,6 +175,7 @@ jobs:
           set -euo pipefail
           trusted_validator="$RUNNER_TEMP/trusted-validate-version-cut.mjs"
           cp scripts/validate-version-cut.mjs "$trusted_validator"
+          cp scripts/publish-signed-version-commit.mjs "$RUNNER_TEMP/trusted-publish-version-commit.mjs"
           git checkout -B "$BRANCH"
           git apply --index "$RUNNER_TEMP/version-cut/version.patch"
           node "$trusted_validator"
@@ -238,8 +239,9 @@ jobs:
           set -euo pipefail
           # The branch is a disposable projection of main + the pending
           # changesets, rebuilt from the current tip on every main push.
-          gh auth setup-git
-          git -c core.hooksPath=/dev/null push --force origin "$BRANCH"
+          # Published through the Git Data API so GitHub signs the commit: main
+          # requires signed commits and a commit pushed with git is unverified.
+          node "$RUNNER_TEMP/trusted-publish-version-commit.mjs"
 
       - name: Create or refresh the ready version PR
         env:
