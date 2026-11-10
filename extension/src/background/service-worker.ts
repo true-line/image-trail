@@ -8,6 +8,7 @@ import { IndexedDbWorkspaceLayoutStore } from '../data/workspace-layout-controll
 import { IndexedDbUrlTemplateStore } from '../data/url-template-controller.js';
 import { createUrlMetadataStores, reconcilePersistedUrlMetadataPolicy } from '../data/url-metadata-stores.js';
 import { RecentHistoryCache } from './recent-history-cache.js';
+import { sessionStorageForContext } from './session-storage-context.js';
 import { configureBlobKeySessionStorage, restoreActiveBlobKey } from '../data/crypto/blob-keyring.js';
 import { openBlobPayload, sealBlobPayload } from '../data/crypto/binary-envelope.js';
 import { createEncryptedImageFile } from '../data/import-export/encrypted-image.js';
@@ -102,11 +103,7 @@ const TOGGLE_BUILD_IDENTITY_COMMAND = 'toggle-build-info-overlay';
 const BROWSER_COMMAND_ACTIONS = new Map(BROWSER_COMMAND_SHORTCUTS.map((shortcut) => [shortcut.command, shortcut.action]));
 const SUPPORTED_PAGE_PATTERN = /^https?:\/\//u;
 const imageRequests = new ImageRequestManager();
-try {
-  configureBlobKeySessionStorage(chrome.storage?.session);
-} catch {
-  configureBlobKeySessionStorage(undefined);
-}
+configureBlobKeySessionStorage(sessionStorageForContext());
 const bookmarkStore = new IndexedDbBookmarkStore({
   getActiveBlobKey: restoreActiveBlobKey,
   getPinSaveStoragePreference: async () => (await loadLocalSettings()).pinSaveStoragePreference,
@@ -119,7 +116,7 @@ const { parsedFieldStateStore, urlReviewStatusStore, reconcileSearchableMetadata
   getSearchableMetadataPolicy: async () => (await loadLocalSettings()).searchableMetadataPolicy,
 });
 const urlTemplateStore = new IndexedDbUrlTemplateStore();
-const recentHistoryCache = new RecentHistoryCache(chrome.storage?.session);
+const recentHistoryCache = new RecentHistoryCache(sessionStorageForContext());
 const { notifyLibraryChange, notifySecureSessionChange } = createChangeNotifiers(chrome.runtime, chrome.tabs);
 /** Composition-root context handed to extracted handler modules; see {@link ServiceWorkerContext}. */
 const context: ServiceWorkerContext = {
