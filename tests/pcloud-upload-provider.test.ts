@@ -121,6 +121,9 @@ test('uploadPCloudBackup creates folders, uploads, retries listfolder, and verif
     if (url.endsWith('/uploadfile')) {
       const form = init?.body as FormData;
       assert.equal(form.get('access_token'), 'token-secret');
+      // pCloud ignores fields after the file part and answers "Log in required".
+      assert.equal([...form.keys()][0], 'access_token');
+      assert.equal([...form.keys()].at(-1), 'file');
       assert.equal(form.get('folderid'), '300');
       assert.equal(form.get('nopartial'), '1');
       assert.equal(form.get('renameifexists'), '1');
