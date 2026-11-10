@@ -1146,6 +1146,7 @@
           "paths": [
             "tests/data-crypto.test.ts",
             "tests/indexeddb-protected-pins.test.ts",
+            "tests/background-blob-key-multi-key-unlock.test.ts",
             "tests/blob-key-setup-ordering.test.ts",
             "tests/background-original-blob-handlers.test.ts",
             "tests/full-backup-original-restore.test.ts",

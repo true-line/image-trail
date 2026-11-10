@@ -23,7 +23,7 @@ export function moveAcknowledgementPath(sequence: number, messageId: string): st
 }
 
 export interface MoveSourceRecordFinalizer {
-  finalize(sourceLocalId: string, sourceUpdatedAt: string): Promise<void>;
+  finalize(sourceLocalId: string, sourceUpdatedAt: string, sourceFingerprint?: string): Promise<void>;
 }
 
 interface ReconcilerOptions {
@@ -172,7 +172,7 @@ export class MoveAcknowledgementReconciler {
       const at = this.#now();
       await repository.markFinalizing(transferId, item.interopId, at);
       try {
-        await this.finalizer.finalize(item.sourceLocalId, item.sourceUpdatedAt);
+        await this.finalizer.finalize(item.sourceLocalId, item.sourceUpdatedAt, item.sourceFingerprint);
         await repository.markFinalized(transferId, item.interopId, this.#now());
       } catch (error) {
         await repository.markFinalizationFailed(

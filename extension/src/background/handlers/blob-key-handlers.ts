@@ -1,5 +1,5 @@
+import { activateFirstMatchingBlobKey, orderBlobKeysForUnlock } from '../../data/crypto/blob-key-unlock.js';
 import {
-  activateWrappedBlobKey,
   createWrappedBlobKey,
   didBlobKeySessionRestoreFail,
   getActiveBlobKey,
@@ -128,16 +128,15 @@ export function createBlobKeyMessageRegistry({
     if (!db) return { ok: false, reason: 'db-unavailable', message: 'Database unavailable.' };
     const keys = new KeysRepository(db);
     const requested = message.payload.keyReference ? await keys.get(message.payload.keyReference) : undefined;
-    const latest = [...(await keys.listByKind('blob'))].sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
-    const blobKey = requested ?? latest;
-    if (!isStoredBlobKey(blobKey)) {
+    const candidates = isStoredBlobKey(requested)
+      ? [requested]
+      : orderBlobKeysForUnlock((await keys.listByKind('blob')).filter(isStoredBlobKey));
+    if (candidates.length === 0) {
       return { ok: false, reason: 'missing-key', message: 'No encrypted blob key exists. Set up encrypted storage first.' };
     }
-    try {
-      await activateWrappedBlobKey(blobKey, password, (await loadSettings()).blobKeyInactivityTimeoutMinutes);
-    } catch {
-      return { ok: false, reason: 'wrong-password', message: 'Password did not unlock encrypted storage.' };
-    }
+    const timeoutMinutes = (await loadSettings()).blobKeyInactivityTimeoutMinutes;
+    const blobKey = await activateFirstMatchingBlobKey(candidates, password, timeoutMinutes);
+    if (!blobKey) return { ok: false, reason: 'wrong-password', message: 'Password did not unlock encrypted storage.' };
     return { ok: true, keyReference: blobKey.reference, message: `Encrypted blob storage unlocked with ${blobKey.reference}.` };
   }
 
@@ -213,7 +212,7 @@ export function createBlobKeyMessageRegistry({
         message: `Key backup already exists for ${result.record.reference}.`,
       };
     }
-    await keys.put(result.record);
+    await keys.put({ ...result.record, importedAt: new Date().toISOString() });
     notifySecureSessionChange({ unlocked: false, keyReference: null, hasKey: true });
     return {
       ok: true,

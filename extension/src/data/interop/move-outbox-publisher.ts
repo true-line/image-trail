@@ -178,6 +178,7 @@ export class MoveOutboxPublisher {
           interopId: item.record.identity.interopId,
           sourceLocalId: item.localId,
           sourceUpdatedAt: item.sourceUpdatedAt,
+          sourceFingerprint: item.sourceFingerprint,
           reviewCategory: item.reviewCategory,
           path: outboxPath(envelope.header.sequence, envelope.header.messageId),
           ciphertext,

@@ -12,6 +12,9 @@ import {
   type InteropObjectStore,
 } from '../extension/src/core/interop/transport.js';
 import { openImageTrailDb } from '../extension/src/data/db.js';
+import { transactionDone } from '../extension/src/data/idb-helpers.js';
+import { DataStore } from '../extension/src/data/schema.js';
+import type { DurableBookmarkPayloadV1 } from '../extension/src/data/types.js';
 import { sealBlobPayload } from '../extension/src/data/crypto/binary-envelope.js';
 import type { ActiveBlobKey } from '../extension/src/data/crypto/blob-keyring.js';
 import { createKeyReference } from '../extension/src/data/crypto/key-reference.js';
@@ -21,6 +24,7 @@ import { MoveAcknowledgementReconciler, moveAcknowledgementPath } from '../exten
 import { isMoveRecordEnvelope, type MoveRecordEnvelope } from '../extension/src/data/interop/move-journal-records.js';
 import { MoveOutboxPublisher } from '../extension/src/data/interop/move-outbox-publisher.js';
 import { finalizeInteropMoveSource } from '../extension/src/data/interop/move-source-finalizer.js';
+import { InteropRecordExportStore } from '../extension/src/data/interop/record-export.js';
 import { importInteropPairingBundle } from '../extension/src/data/interop/pairing-import.js';
 import { openInteropMessage, sealInteropMessage } from '../extension/src/data/interop/sealed-message.js';
 import { SecureMoveOutboxRepository } from '../extension/src/data/interop/secure-move-outbox-repository.js';
@@ -198,9 +202,9 @@ test('accepted sealed acknowledgement finalizes an eligible source exactly once'
   await uploadAcknowledgement(db, pairing, store);
   const finalized: string[] = [];
   const reconciler = new MoveAcknowledgementReconciler(db, store, {
-    finalize: async (sourceLocalId, sourceUpdatedAt) => {
+    finalize: async (sourceLocalId, sourceUpdatedAt, sourceFingerprint) => {
       finalized.push(sourceLocalId);
-      assert.equal(await finalizeInteropMoveSource(db, sourceLocalId, sourceUpdatedAt), true);
+      assert.equal(await finalizeInteropMoveSource(db, sourceLocalId, sourceUpdatedAt, sourceFingerprint), true);
     },
   });
   const locked = await reconciler.reconcile({ transferId: TRANSFER_ID, total: 1, pairing, allowFinalization: false });
@@ -252,11 +256,156 @@ test('source edits made after review stop finalization', async (t) => {
     encrypted.queueUpdatedAt,
   );
   const progress = await new MoveAcknowledgementReconciler(db, store, {
-    finalize: (sourceLocalId, sourceUpdatedAt) => finalizeInteropMoveSource(db, sourceLocalId, sourceUpdatedAt).then(() => undefined),
+    finalize: finalizeThrough(db),
   }).reconcile({ transferId: TRANSFER_ID, total: 1, pairing, allowFinalization: true });
   assert.equal(progress.journal.phase, 'failed');
   assert.equal(progress.counts.finalized, 0);
   assert.equal((await bookmarks.getEncrypted('bookmark-1'))?.envelope.updatedAt, '2026-07-17T12:05:00.000Z');
+});
+
+function finalizeThrough(db: IDBDatabase) {
+  return (sourceLocalId: string, sourceUpdatedAt: string, sourceFingerprint?: string) =>
+    finalizeInteropMoveSource(db, sourceLocalId, sourceUpdatedAt, sourceFingerprint).then(() => undefined);
+}
+
+// Normal re-seals reuse the existing envelope timestamp (queue order must not follow it), so these
+// edits keep `updatedAt` identical to the reviewed value, exactly as the product does.
+async function resealKeepingTimestamp(db: IDBDatabase, change: Partial<DurableBookmarkPayloadV1>): Promise<void> {
+  const bookmarks = new BookmarksRepository(db);
+  const key = await ensureDurableBookmarkKey(new KeysRepository(db));
+  const encrypted = await bookmarks.getEncrypted('bookmark-1');
+  assert.ok(encrypted);
+  const payload = await bookmarks.openRecord(encrypted, key.key);
+  await bookmarks.sealAndPut(
+    encrypted.uuid,
+    { ...payload, ...change },
+    key.key,
+    key.reference,
+    encrypted.envelope.updatedAt,
+    encrypted.url,
+    encrypted.queueUpdatedAt,
+  );
+}
+
+test('a same-timestamp edit after review stops finalization and keeps the record', async (t) => {
+  const { db, pairing, store } = await setup(false);
+  t.after(() => db.close());
+  await uploadAcknowledgement(db, pairing, store);
+  const reviewed = await new BookmarksRepository(db).getEncrypted('bookmark-1');
+  await resealKeepingTimestamp(db, { title: 'Edited after review' });
+  const edited = await new BookmarksRepository(db).getEncrypted('bookmark-1');
+  assert.equal(edited?.envelope.updatedAt, reviewed?.envelope.updatedAt);
+  const progress = await new MoveAcknowledgementReconciler(db, store, { finalize: finalizeThrough(db) }).reconcile({
+    transferId: TRANSFER_ID,
+    total: 1,
+    pairing,
+    allowFinalization: true,
+  });
+  assert.equal(progress.journal.phase, 'failed');
+  assert.equal(progress.counts.finalized, 0);
+  assert.ok(await new BookmarksRepository(db).getEncrypted('bookmark-1'));
+});
+
+test('an original captured after review stops finalization and the original survives', async (t) => {
+  const { db, pairing, store } = await setup(false);
+  t.after(() => db.close());
+  await uploadAcknowledgement(db, pairing, store);
+  const createdAt = '2026-07-17T12:04:30.000Z';
+  const reference = createKeyReference('blob', BLOB_KEY_ID);
+  const aad = {
+    id: 'late-blob',
+    kind: 'original' as const,
+    schemaVersion: 1 as const,
+    algorithm: 'AES-GCM' as const,
+    createdAt,
+    key: reference,
+  };
+  const bytes = Uint8Array.from({ length: 8 }, (_value, index) => index);
+  const sealed = await sealBlobPayload({
+    key: await generateAesGcmKey(false),
+    aad,
+    metadata: { mimeType: 'image/jpeg', byteLength: 8, sourceUrl: 'https://example.test/image.jpg', capturedAt: createdAt },
+    bytes: bytes.buffer,
+  });
+  await new BlobsRepository(db).put({ ...aad, ...sealed, referenceCount: 1 });
+  await resealKeepingTimestamp(db, {
+    storedOriginal: { blobId: 'late-blob', mimeType: 'image/jpeg', byteLength: 8, capturedAt: createdAt },
+  });
+  const progress = await new MoveAcknowledgementReconciler(db, store, { finalize: finalizeThrough(db) }).reconcile({
+    transferId: TRANSFER_ID,
+    total: 1,
+    pairing,
+    allowFinalization: true,
+  });
+  assert.equal(progress.journal.phase, 'failed');
+  assert.equal(progress.counts.finalized, 0);
+  assert.ok(await new BookmarksRepository(db).getEncrypted('bookmark-1'));
+  assert.ok(await new BlobsRepository(db).get('late-blob'));
+});
+
+test('an edit that lands while the review is assembled is not adopted into the fingerprint', async (t) => {
+  const opened = await openImageTrailDb(new IDBFactory());
+  assert.ok(opened.db);
+  const db = opened.db;
+  t.after(() => db.close());
+  const bookmarks = new BookmarksRepository(db);
+  const key = await ensureDurableBookmarkKey(new KeysRepository(db));
+  const stamp = '2026-07-17T12:02:00.000Z';
+  await bookmarks.sealAndPut(
+    'bookmark-1',
+    { url: 'https://example.test/image.jpg', title: 'Source record', bookmarkedAt: stamp },
+    key.key,
+    key.reference,
+    stamp,
+  );
+
+  // The review re-seals the row to record custody. Let a user edit land right after that write,
+  // before the review finishes: the exported record is then older than the stored row.
+  const sealAndPut = BookmarksRepository.prototype.sealAndPut;
+  let editAfterNextWrite = true;
+  BookmarksRepository.prototype.sealAndPut = async function (this: BookmarksRepository, ...args: Parameters<typeof sealAndPut>) {
+    const written = await sealAndPut.apply(this, args);
+    if (editAfterNextWrite) {
+      editAfterNextWrite = false;
+      await resealKeepingTimestamp(db, { title: 'Edited during review' });
+    }
+    return written;
+  } as typeof sealAndPut;
+  t.after(() => (BookmarksRepository.prototype.sealAndPut = sealAndPut));
+
+  const review = await new InteropRecordExportStore(db, { now: () => stamp }).review(['bookmark-1'], null, { includeOriginalBytes: false });
+  const [reviewed] = review.records;
+  assert.ok(reviewed);
+  assert.equal(editAfterNextWrite, false, 'the review must have re-sealed the row for this test to mean anything');
+
+  await assert.rejects(
+    finalizeInteropMoveSource(db, 'bookmark-1', reviewed.sourceUpdatedAt, reviewed.sourceFingerprint),
+    /source changed after review/u,
+  );
+  assert.ok(await bookmarks.getEncrypted('bookmark-1'));
+});
+
+test('a review recorded without a fingerprint never deletes the source', async (t) => {
+  const { db, pairing, store } = await setup(false);
+  t.after(() => db.close());
+  await uploadAcknowledgement(db, pairing, store);
+  const outbox = new SecureMoveOutboxRepository(db);
+  const item = await outbox.item(TRANSFER_ID, INTEROP_ID);
+  assert.ok(item?.sourceFingerprint);
+  const { sourceFingerprint: _legacy, ...legacy } = item;
+  const transaction = db.transaction(DataStore.MoveItems, 'readwrite');
+  transaction.objectStore(DataStore.MoveItems).put(legacy);
+  await transactionDone(transaction);
+  assert.equal((await outbox.item(TRANSFER_ID, INTEROP_ID))?.sourceFingerprint, undefined);
+  const progress = await new MoveAcknowledgementReconciler(db, store, { finalize: finalizeThrough(db) }).reconcile({
+    transferId: TRANSFER_ID,
+    total: 1,
+    pairing,
+    allowFinalization: true,
+  });
+  assert.equal(progress.journal.phase, 'failed');
+  assert.equal(progress.counts.finalized, 0);
+  assert.ok(await new BookmarksRepository(db).getEncrypted('bookmark-1'));
 });
 
 test('acknowledgement that does not cover the sealed source message fails closed', async (t) => {
