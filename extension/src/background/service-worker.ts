@@ -69,7 +69,7 @@ import type { ImportEncryptedImageMessage } from './messages.js';
 import { ImageRequestManager } from './image-request-manager.js';
 import { extractOrigin, hasOriginPermission, requestOriginPermission } from './permissions.js';
 import { findDeletableOrphanBlobIds } from './orphaned-blobs.js';
-import { defineMessage, dispatchRequest, type MessageDef } from './message-dispatch.js';
+import { defineMessage, dispatchRequestFromSender, type MessageDef } from './message-dispatch.js';
 import * as requestSchemas from './message-schemas.js';
 import type { ExtensionRequest, ExtensionResponse } from './messages.js';
 import type {
@@ -741,7 +741,7 @@ const messageRegistry = {
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (!isExtensionRequest(message)) return false;
-  return dispatchRequest(messageRegistry, message, sendResponse, { sender });
+  return dispatchRequestFromSender(messageRegistry, message, sendResponse, sender, chrome.runtime.id);
 });
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
