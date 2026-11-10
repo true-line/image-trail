@@ -24,6 +24,15 @@ export interface StoredKeyRecord<K extends KeyKind = KeyKind> extends KeyReferen
   readonly key?: CryptoKey;
 }
 
+/**
+ * Authenticated metadata of a stored record's envelope. `recordId` binds the ciphertext to the
+ * row it was sealed for; envelopes written before the binding existed do not carry it.
+ */
+export interface RecordEnvelopeMetadata<TRecordType extends string> extends Record<string, unknown> {
+  readonly recordType: TRecordType;
+  readonly recordId?: string | undefined;
+}
+
 export interface EncryptedEnvelope<TMetadata extends Record<string, unknown> = Record<string, unknown>> {
   readonly schemaVersion: 1;
   readonly payloadVersion: number;

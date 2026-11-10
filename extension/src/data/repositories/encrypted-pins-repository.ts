@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import type { StorageUsageSummary } from '../../core/image/capture-result.js';
 import { openValidatedJsonEnvelope, sealJsonEnvelope } from '../crypto/envelope.js';
-import type { EncryptedEnvelope, KeyReference } from '../crypto/types.js';
+import type { EncryptedEnvelope, RecordEnvelopeMetadata, KeyReference } from '../crypto/types.js';
 import { encryptedEnvelopeSchema } from '../crypto/types.schema.js';
 import { requestToPromise, transactionDone } from '../idb-helpers.js';
 import { DataStore, SchemaIndex } from '../schema.js';
@@ -14,7 +14,7 @@ export interface EncryptedPinRecord {
   readonly plainPinId: string;
   readonly urlHash: string;
   readonly queueUpdatedAt: string;
-  readonly envelope: EncryptedEnvelope<{ readonly recordType: 'encryptedPin' }>;
+  readonly envelope: EncryptedEnvelope<RecordEnvelopeMetadata<'encryptedPin'>>;
 }
 
 const encryptedPinRecordSchema = v.object({
@@ -141,7 +141,7 @@ export class EncryptedPinsRepository {
       payloadVersion: 1,
       key: input.key,
       keyReference: input.keyReference,
-      authenticatedMetadata: { recordType: 'encryptedPin' as const },
+      authenticatedMetadata: { recordType: 'encryptedPin' as const, recordId: input.id },
       now: input.now,
     });
     return this.put({
@@ -154,6 +154,6 @@ export class EncryptedPinsRepository {
   }
 
   async openRecord(record: EncryptedPinRecord, key: CryptoKey): Promise<DurableEncryptedPinPayloadV1> {
-    return openValidatedJsonEnvelope(record.envelope, key, durableEncryptedPinPayloadSchema);
+    return openValidatedJsonEnvelope(record.envelope, key, durableEncryptedPinPayloadSchema, record.id);
   }
 }
