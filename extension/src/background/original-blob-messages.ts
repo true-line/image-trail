@@ -43,7 +43,8 @@ export interface ImportOriginalBlobsResultMessage {
   readonly type: typeof MessageType.ImportOriginalBlobsResult;
   readonly version: typeof MESSAGE_PROTOCOL_VERSION;
   readonly payload:
-    { readonly ok: true; readonly importedCount: number } | { readonly ok: false; readonly reason: string; readonly message: string };
+    | { readonly ok: true; readonly importedCount: number; readonly skippedCount: number }
+    | { readonly ok: false; readonly reason: string; readonly message: string };
 }
 
 export type OriginalBlobRequest = CheckOriginalBlobsMessage | ExportOriginalBlobsMessage | ImportOriginalBlobsMessage;

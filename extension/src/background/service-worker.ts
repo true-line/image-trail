@@ -69,7 +69,7 @@ import type { CreateBlobPreviewMessage } from './messages.js';
 import type { ImportEncryptedImageMessage } from './messages.js';
 import { ImageRequestManager } from './image-request-manager.js';
 import { extractOrigin, hasOriginPermission, requestOriginPermission } from './permissions.js';
-import { findDeletableOrphanBlobIds } from './orphaned-blobs.js';
+import { cleanupReferencedBlobIds, findDeletableOrphanBlobIds } from './orphaned-blobs.js';
 import { defineMessage, dispatchRequestFromSender, type MessageDef } from './message-dispatch.js';
 import * as requestSchemas from './message-schemas.js';
 import type { ExtensionRequest, ExtensionResponse } from './messages.js';
@@ -178,15 +178,10 @@ void reconcilePersistedUrlMetadataPolicy({
 }).catch(() => {
   console.warn('Image Trail could not reconcile URL metadata privacy policy at startup.');
 });
-async function referencedBlobIds(): Promise<Set<string>> {
-  const referenced = new Set(await bookmarkStore.loadOriginalBlobIds());
+async function referencedBlobIds(): Promise<Set<string> | null> {
+  const bookmarked = await bookmarkStore.loadOriginalBlobReferences();
   await recentHistoryCache.ready();
-  for (const history of recentHistoryCache.values()) {
-    for (const item of history) {
-      if (item.blobId) referenced.add(item.blobId);
-    }
-  }
-  return referenced;
+  return cleanupReferencedBlobIds(bookmarked, recentHistoryCache.values());
 }
 function createPreviewForDataUrl(dataUrl: string): Promise<import('./messages.js').CreateBlobPreviewResultMessage['payload']> {
   const parsed = dataUrlToImageBytes(dataUrl);

@@ -3,6 +3,7 @@ import type { PCloudBackupDownloadResult, PCloudProviderStatus } from '../../cor
 import type { PanelState } from '../../core/types.js';
 import type { CaptureStore } from '../../content/capture-controller.js';
 import type { downloadPCloudBackup, listPCloudBackups } from '../../content/pcloud-provider-client.js';
+import type { OriginalRestoreOutcome } from './full-backup-original-restore.js';
 import {
   createFullBackupImportResult,
   decryptCloudBackupManifest,
@@ -126,10 +127,7 @@ export class PCloudBackupRestoreCoordinator {
     }
   }
 
-  async restoreOriginals(
-    context: ChunkedCloudRestoreContext,
-    password: string,
-  ): Promise<{ readonly ok: true; readonly importedOriginalCount: number } | { readonly ok: false; readonly message: string }> {
+  async restoreOriginals(context: ChunkedCloudRestoreContext, password: string): Promise<OriginalRestoreOutcome> {
     const captureStore = this.deps.captureStore();
     if (!captureStore) return { ok: false, message: 'Encrypted original storage is unavailable; no bookmarks were imported.' };
     const active: ActiveRestore = { cancelled: false };
@@ -138,11 +136,11 @@ export class PCloudBackupRestoreCoordinator {
     try {
       const metadata = await this.loadMetadataPart(context, active);
       await this.importBlobKeys(captureStore, metadata, password, active);
-      const importedOriginalCount = await this.importOriginalParts(captureStore, context, active);
+      const { importedOriginalCount, skippedOriginalCount } = await this.importOriginalParts(captureStore, context, active);
       await this.deps.refreshBlobKeyStatus();
       await this.deps.refreshStorageUsage();
       this.connected(active, `Restored ${importedOriginalCount} encrypted original part(s).`);
-      return { ok: true, importedOriginalCount };
+      return { ok: true, importedOriginalCount, skippedOriginalCount };
     } catch (error) {
       const message = this.finishError(error, active);
       return { ok: false, message };
@@ -201,9 +199,10 @@ export class PCloudBackupRestoreCoordinator {
     captureStore: CaptureStore,
     context: ChunkedCloudRestoreContext,
     active: ActiveRestore,
-  ): Promise<number> {
+  ): Promise<{ readonly importedOriginalCount: number; readonly skippedOriginalCount: number }> {
     const references = orderedParts(context.manifest).filter((part) => part.kind === 'original');
     let importedCount = 0;
+    let skippedCount = 0;
     let originalBytes = 0;
     for (const [index, reference] of references.entries()) {
       this.assertNotCancelled(active);
@@ -215,12 +214,13 @@ export class PCloudBackupRestoreCoordinator {
       const imported = await captureStore.importOriginalBlobRecords([payload.originalBlob]);
       if (!imported.ok) throw new CloudRestoreFlowError(imported.message);
       importedCount += imported.importedCount;
+      skippedCount += imported.skippedCount;
       originalBytes += payload.originalBlob.encryptedByteLength;
     }
     if (originalBytes !== context.manifest.originalBytes) {
       throw new CloudRestoreFlowError('Cloud backup original byte count did not match its manifest.');
     }
-    return importedCount;
+    return { importedOriginalCount: importedCount, skippedOriginalCount: skippedCount };
   }
 
   private async downloadPart(reference: CloudBackupPartReference, session: CloudBackupCryptoSession, active: ActiveRestore) {

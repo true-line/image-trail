@@ -1146,8 +1146,13 @@
           "paths": [
             "tests/data-crypto.test.ts",
             "tests/indexeddb-protected-pins.test.ts",
-            "tests/background-blob-key-multi-key-unlock.test.ts"
-          ]
+            "tests/background-blob-key-multi-key-unlock.test.ts",
+            "tests/blob-key-setup-ordering.test.ts",
+            "tests/background-original-blob-handlers.test.ts",
+            "tests/full-backup-original-restore.test.ts",
+            "tests/original-blob-references.test.ts"
+          ],
+          "notes": "Setup persists the key before unlocking and refuses a second key; restore keeps originals already stored under the same id and reports them, sends originals in bounded batches, and reports partial progress when a batch fails; orphan cleanup deletes nothing while a bookmark row is unreadable."
         },
         {
           "type": "playwright-e2e",

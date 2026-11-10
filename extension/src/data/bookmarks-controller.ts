@@ -24,6 +24,7 @@ import { moveBookmarkRowsToFront, removeBookmarkRows, withBookmarkRowWriteLock }
 import { openImageTrailDb } from './db.js';
 import { ensureDurableBookmarkKeyOrClose, type DurableBookmarkKeyContext } from './durable-bookmark-key.js';
 import { DEFAULT_LOCAL_SETTINGS } from './local-settings.js';
+import { collectOriginalBlobReferences, type OriginalBlobReferences } from './original-blob-references.js';
 import { DEFAULT_QUEUE_DISPLAY_ORDER, sortQueueRecords, type QueueDisplayOrder } from '../core/display-order.js';
 import { BlobsRepository } from './repositories/blobs-repository.js';
 import { BookmarksRepository } from './repositories/bookmarks-repository.js';
@@ -96,19 +97,13 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
   }
 
   async loadOriginalBlobIds(): Promise<ReadonlySet<string>> {
+    return (await this.loadOriginalBlobReferences()).ids;
+  }
+
+  /** Orphan cleanup must delete nothing while `unreadableCount > 0`; see {@link OriginalBlobReferences}. */
+  async loadOriginalBlobReferences(): Promise<OriginalBlobReferences> {
     const context = await this.openContext();
-    const ids = new Set<string>();
-    if (!context) return ids;
-    for (const record of await context.repository.listEncryptedNewestFirst()) {
-      try {
-        const payload = await context.repository.openRecord(record, context.bookmarkKey.key);
-        if (payload.storedOriginal?.blobId) ids.add(payload.storedOriginal.blobId);
-        if (payload.protectedPin?.storedOriginalBlobId) ids.add(payload.protectedPin.storedOriginalBlobId);
-      } catch {
-        // Unreadable legacy rows cannot safely identify linked originals.
-      }
-    }
-    return ids;
+    return context ? collectOriginalBlobReferences(context.repository, context.bookmarkKey.key) : { ids: new Set(), unreadableCount: 0 };
   }
 
   async loadPage(input: {

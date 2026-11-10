@@ -16,6 +16,7 @@ import {
   type ImportOriginalBlobsResultMessage,
 } from '../extension/src/background/messages.js';
 import { createKeyReference } from '../extension/src/data/crypto/key-reference.js';
+import { portableStoredBlobRecord } from '../extension/src/data/import-export/full-backup.js';
 import { BlobsRepository } from '../extension/src/data/repositories/blobs-repository.js';
 import type { StoredBlobRecord } from '../extension/src/data/types.js';
 import { openFreshImageTrailDb } from './indexeddb-test-helpers.js';
@@ -103,5 +104,63 @@ test('extracted original export and import handlers preserve portable backup beh
     registry[MessageType.ImportOriginalBlobs],
     createImportOriginalBlobsMessage(exported.payload.records),
   );
-  assert.deepEqual(imported.payload, { ok: true, importedCount: 1 });
+  assert.deepEqual(imported.payload, { ok: true, importedCount: 0, skippedCount: 1 }, 'the stored original already has that id');
+});
+
+test('original import keeps existing bytes on an id collision and reports the skip', async (t) => {
+  const db = await openFreshImageTrailDb();
+  t.after(() => db.close());
+  const blobs = new BlobsRepository(db);
+  await blobs.put(record('colliding-original'));
+  const foreignBytes = new Uint8Array([7, 7, 7, 7]).buffer;
+  const registry = createOriginalBlobMessageRegistry({ getDb: async () => db });
+
+  const imported = await handleAndRespond<ImportOriginalBlobsResultMessage>(
+    registry[MessageType.ImportOriginalBlobs],
+    createImportOriginalBlobsMessage([
+      portableStoredBlobRecord({ ...record('colliding-original'), ciphertext: foreignBytes, encryptedByteLength: 4 }),
+      portableStoredBlobRecord(record('new-original')),
+    ]),
+  );
+
+  assert.deepEqual(imported.payload, { ok: true, importedCount: 1, skippedCount: 1 });
+  assert.equal((await blobs.get('colliding-original'))?.encryptedByteLength, 1_000_000, 'the existing original bytes are kept');
+  assert.equal((await blobs.get('new-original'))?.encryptedByteLength, 1_000_000);
+  assert.deepEqual(await blobs.findMissingOriginalIds(['colliding-original', 'new-original']), []);
+});
+
+test('a kept original gains a reference, so removing one record that uses it keeps the bytes', async (t) => {
+  const db = await openFreshImageTrailDb();
+  t.after(() => db.close());
+  const blobs = new BlobsRepository(db);
+  await blobs.put(record('shared-original'));
+  const registry = createOriginalBlobMessageRegistry({ getDb: async () => db });
+
+  await handleAndRespond<ImportOriginalBlobsResultMessage>(
+    registry[MessageType.ImportOriginalBlobs],
+    createImportOriginalBlobsMessage([portableStoredBlobRecord(record('shared-original'))]),
+  );
+
+  await blobs.remove('shared-original');
+  assert.ok(await blobs.get('shared-original'), 'the other record still has its original');
+  await blobs.remove('shared-original');
+  assert.equal(await blobs.get('shared-original'), undefined);
+});
+
+test('a batch with an invalid original stores none of its records', async (t) => {
+  const db = await openFreshImageTrailDb();
+  t.after(() => db.close());
+  const blobs = new BlobsRepository(db);
+  const registry = createOriginalBlobMessageRegistry({ getDb: async () => db });
+
+  const imported = await handleAndRespond<ImportOriginalBlobsResultMessage>(
+    registry[MessageType.ImportOriginalBlobs],
+    createImportOriginalBlobsMessage([
+      portableStoredBlobRecord(record('valid-before-invalid')),
+      { ...portableStoredBlobRecord(record('invalid-length')), encryptedByteLength: 3 },
+    ]),
+  );
+
+  assert.equal(imported.payload.ok, false);
+  assert.equal(await blobs.get('valid-before-invalid'), undefined, 'a failed batch leaves nothing the caller was not told about');
 });

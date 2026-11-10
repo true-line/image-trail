@@ -1,6 +1,6 @@
 import { activateFirstMatchingBlobKey, orderBlobKeysForUnlock } from '../../data/crypto/blob-key-unlock.js';
 import {
-  createAndActivateWrappedBlobKey,
+  createWrappedBlobKey,
   didBlobKeySessionRestoreFail,
   getActiveBlobKey,
   getBlobKeySessionSnapshot,
@@ -102,13 +102,22 @@ export function createBlobKeyMessageRegistry({
     if (!password) return { ok: false, reason: 'empty-password', message: 'Enter a password to set up encrypted blob storage.' };
     const db = await getDb();
     if (!db) return { ok: false, reason: 'db-unavailable', message: 'Database unavailable.' };
-    const timeoutMinutes = (await loadSettings()).blobKeyInactivityTimeoutMinutes;
-    const wrapped = await createAndActivateWrappedBlobKey({ password, timeoutMinutes });
-    await new KeysRepository(db).put(wrapped.metadata);
+    const keys = new KeysRepository(db);
+    const keyExists = {
+      ok: false,
+      reason: 'key-exists',
+      message: 'Encrypted storage is already set up. Unlock it with its password.',
+    } as const;
+    if ((await keys.listByKind('blob')).length > 0) return keyExists;
+    const pending = await createWrappedBlobKey({ password });
+    // Persist before activating: a key that was never saved must not unlock the session. The
+    // check-and-store is one transaction, so a concurrent setup cannot add a second key.
+    if ((await keys.putUnlessKindExists(pending.metadata, isStoredBlobKey)) !== pending.metadata) return keyExists;
+    await pending.activate((await loadSettings()).blobKeyInactivityTimeoutMinutes);
     return {
       ok: true,
-      keyReference: wrapped.metadata.reference,
-      message: `Encrypted blob storage unlocked with ${wrapped.metadata.reference}.`,
+      keyReference: pending.metadata.reference,
+      message: `Encrypted blob storage unlocked with ${pending.metadata.reference}.`,
     };
   }
 

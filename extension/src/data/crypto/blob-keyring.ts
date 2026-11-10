@@ -70,12 +70,18 @@ export function didBlobKeySessionRestoreFail(): boolean {
   return blobKeySession.restoreFailed;
 }
 
-export async function createAndActivateWrappedBlobKey(input: {
+export interface PendingBlobKey {
+  readonly metadata: StoredKeyRecord<'blob'>;
+  /** Unlocks the session with this key. Call only after `metadata` is persisted. */
+  readonly activate: (timeoutMinutes?: SessionInactivityTimeoutMinutes) => Promise<ActiveBlobKey>;
+}
+
+/** Creates a password-wrapped blob key without activating it, so callers can persist it first. */
+export async function createWrappedBlobKey(input: {
   readonly password: string;
   readonly uuid?: string;
   readonly now?: string;
-  readonly timeoutMinutes?: SessionInactivityTimeoutMinutes;
-}): Promise<WrappedBlobKey> {
+}): Promise<PendingBlobKey> {
   const uuid = input.uuid ?? crypto.randomUUID();
   const now = input.now ?? new Date().toISOString();
   const reference = createKeyReference('blob', uuid);
@@ -95,13 +101,21 @@ export async function createAndActivateWrappedBlobKey(input: {
     },
     extractable: false,
   };
-  const active = await blobKeySession.unlock(
-    reference,
-    extractableKey,
-    now,
-    input.timeoutMinutes ?? DEFAULT_SESSION_INACTIVITY_TIMEOUT_MINUTES,
-  );
-  return { active, metadata };
+  return {
+    metadata,
+    activate: (timeoutMinutes = DEFAULT_SESSION_INACTIVITY_TIMEOUT_MINUTES) =>
+      blobKeySession.unlock(reference, extractableKey, now, timeoutMinutes),
+  };
+}
+
+export async function createAndActivateWrappedBlobKey(input: {
+  readonly password: string;
+  readonly uuid?: string;
+  readonly now?: string;
+  readonly timeoutMinutes?: SessionInactivityTimeoutMinutes;
+}): Promise<WrappedBlobKey> {
+  const pending = await createWrappedBlobKey(input);
+  return { active: await pending.activate(input.timeoutMinutes), metadata: pending.metadata };
 }
 
 export async function activateWrappedBlobKey(

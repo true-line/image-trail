@@ -20,6 +20,35 @@ export class BlobsRepository {
     return record;
   }
 
+  /**
+   * Restores a batch of blobs in one transaction, so a failure stores none of them. An id that is
+   * already stored keeps its bytes and gains a reference instead: the restore is about to point a
+   * record at it, and `remove` deletes the bytes once the count reaches one. Counting a reference
+   * that turns out to be a duplicate only delays deletion until orphan cleanup.
+   */
+  async restoreKeepingExisting(records: readonly StoredBlobRecord[]): Promise<{ readonly stored: number; readonly kept: number }> {
+    if (records.length === 0) return { stored: 0, kept: 0 };
+    const transaction = this.db.transaction([DataStore.Blobs, DataStore.OriginalBlobIndex], 'readwrite');
+    const done = transactionDone(transaction);
+    const blobs = transaction.objectStore(DataStore.Blobs);
+    let stored = 0;
+    let kept = 0;
+    for (const record of records) {
+      const existing = await requestToPromise<StoredBlobRecord | undefined>(blobs.get(record.id));
+      if (existing) {
+        blobs.put({ ...existing, referenceCount: existing.referenceCount + 1 });
+        kept += 1;
+        continue;
+      }
+      blobs.put(record);
+      const parsed = v.safeParse(storedBlobRecordSchema, record);
+      if (parsed.success && parsed.output.kind === 'original') transaction.objectStore(DataStore.OriginalBlobIndex).put({ id: record.id });
+      stored += 1;
+    }
+    await done;
+    return { stored, kept };
+  }
+
   async get(id: string): Promise<StoredBlobRecord | undefined> {
     const transaction = this.db.transaction(DataStore.Blobs, 'readonly');
     const result = await requestToPromise<unknown>(transaction.objectStore(DataStore.Blobs).get(id));

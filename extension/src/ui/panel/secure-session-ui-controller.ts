@@ -24,7 +24,9 @@ export class SecureSessionUiController {
     const captureStore = this.deps.captureStore();
     if (!captureStore) return;
     const result = await captureStore.setupBlobKey(password);
-    this.applyResult(result.message, result.ok, result.ok ? result.keyReference : null, result.ok);
+    // A refused duplicate setup means a key exists, so the panel offers unlock instead of setup.
+    const hasKey = result.ok || result.reason === 'key-exists';
+    this.applyResult(result.message, result.ok, result.ok ? result.keyReference : null, hasKey);
     await this.finishUnlock(result.ok);
   }
 

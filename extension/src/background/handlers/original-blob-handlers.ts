@@ -54,17 +54,16 @@ export function createOriginalBlobMessageRegistry({
     const db = await getDb();
     if (!db) return { ok: false, reason: 'db-unavailable', message: 'Database unavailable.' };
     const blobs = new BlobsRepository(db);
-    let importedCount = 0;
     try {
-      for (const record of message.payload.records) {
-        if (record.kind !== 'original') continue;
-        await blobs.put(storedBlobRecordFromPortable(record));
-        importedCount += 1;
-      }
+      // Convert first and store in one transaction: a bad or unstorable record leaves nothing behind,
+      // so a failed batch never has originals the caller was not told about.
+      const records = message.payload.records.filter((record) => record.kind === 'original').map(storedBlobRecordFromPortable);
+      // An id that is already stored keeps its bytes: a stale or foreign backup never replaces them.
+      const { stored, kept } = await blobs.restoreKeepingExisting(records);
+      return { ok: true, importedCount: stored, skippedCount: kept };
     } catch {
       return { ok: false, reason: 'invalid-original', message: 'Encrypted original backup payload was invalid.' };
     }
-    return { ok: true, importedCount };
   }
 
   return {

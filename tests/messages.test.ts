@@ -489,7 +489,7 @@ test('creates encrypted original blob import messages', () => {
   assert.equal(request.payload.records[0]?.ciphertext, 'AQIDBA==');
   assert.equal(isExtensionRequest(request), true);
 
-  const result = createImportOriginalBlobsResultMessage({ ok: true, importedCount: 1 });
+  const result = createImportOriginalBlobsResultMessage({ ok: true, importedCount: 1, skippedCount: 0 });
   assert.equal(result.type, MessageType.ImportOriginalBlobsResult);
   assert.equal(isExtensionResponse(result), true);
   assert.equal(isImportOriginalBlobsResultMessage(result), true);
