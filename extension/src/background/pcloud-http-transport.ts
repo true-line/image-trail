@@ -2,6 +2,8 @@ import type { PCloudApiHost } from '../core/cloud/pcloud-provider.js';
 import { numberOrUndefined } from './pcloud-provider-utils.js';
 
 const PCLOUD_REQUEST_HEADER_RULE_ID_BASE = 900199;
+/** `chrome.tabs.TAB_ID_NONE`: the request does not come from a tab. */
+const NO_TAB_ID = -1;
 
 export interface PCloudCredential {
   readonly accessToken: string;
@@ -120,6 +122,9 @@ export class PCloudHttpTransport {
     pcloudRequestHeaderRuleId += 1;
     const ruleId = pcloudRequestHeaderRuleId;
     await chrome.declarativeNetRequest.updateSessionRules({
+      // Session rules outlive a worker restart while the counter above does not: clear the id
+      // first so a rule left behind by a stopped worker cannot make this call fail.
+      removeRuleIds: [ruleId],
       addRules: [
         {
           id: ruleId,
@@ -142,6 +147,10 @@ export class PCloudHttpTransport {
           condition: {
             regexFilter: `^${escapeRegExp(url)}$`,
             resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST],
+            // Only this extension's own worker request gets the rewritten headers, never a
+            // page's request to the same address.
+            tabIds: [NO_TAB_ID],
+            ...(chrome.runtime?.id ? { initiatorDomains: [chrome.runtime.id] } : {}),
           },
         },
       ],
