@@ -20,6 +20,7 @@ import {
   toRelationshipPayload,
 } from './bookmark-record-mappers.js';
 import type { ActiveBlobKey } from './crypto/blob-keyring.js';
+import { removeBookmarkRows, withBookmarkRowWriteLock } from './bookmark-row-writes.js';
 import { openImageTrailDb } from './db.js';
 import { ensureDurableBookmarkKey, type DurableBookmarkKeyContext } from './durable-bookmark-key.js';
 import { DEFAULT_LOCAL_SETTINGS } from './local-settings.js';
@@ -29,7 +30,6 @@ import { BookmarksRepository } from './repositories/bookmarks-repository.js';
 import { EncryptedPinsRepository, type EncryptedPinRecord } from './repositories/encrypted-pins-repository.js';
 import { EncryptedPinThumbnailsRepository } from './repositories/encrypted-pin-thumbnails-repository.js';
 import { KeysRepository } from './repositories/keys-repository.js';
-import type { DurableBookmarkPayloadV1 } from './types.js';
 import {
   BookmarkPersistenceError,
   type BookmarkPersistenceOptions,
@@ -150,7 +150,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     const bookmark = createDisplayRecord({ ...record, id: importedDataUrl ? record.id : record.url, source: 'bookmark' });
     if (!context) return bookmark;
 
-    return this.saveWithContext(context, bookmark, options);
+    return withBookmarkRowWriteLock(() => this.saveWithContext(context, bookmark, options));
   }
 
   private async saveWithContext(
@@ -198,7 +198,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     const importedDataUrl = record.url.startsWith('data:image/');
     const bookmark = createDisplayRecord({ ...record, id: importedDataUrl ? record.id : record.url, source: 'bookmark' });
     try {
-      return { ok: true as const, record: await this.saveWithContext(context, bookmark, options ?? {}) };
+      return { ok: true as const, record: await withBookmarkRowWriteLock(() => this.saveWithContext(context, bookmark, options ?? {})) };
     } catch (error) {
       return { ok: false as const, message: error instanceof Error ? error.message : 'Bookmark save failed.' };
     }
@@ -214,7 +214,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     try {
       return {
         ok: true as const,
-        record: await this.saveWithContext(context, bookmark, protectedImportOptions(activeBlobKey)),
+        record: await withBookmarkRowWriteLock(() => this.saveWithContext(context, bookmark, protectedImportOptions(activeBlobKey))),
       };
     } catch (error) {
       return {
@@ -334,10 +334,9 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     if (!context) return [];
     const uniqueIds = [...new Set(ids)].filter(Boolean);
     const baseTime = Date.now();
-    const updated = await context.repository.updateQueueUpdatedAt(
-      // Queue pages read queueUpdatedAt newest-first, so earlier selected IDs get later timestamps.
-      uniqueIds.map((uuid, index) => ({ uuid, queueUpdatedAt: new Date(baseTime + uniqueIds.length - index).toISOString() })),
-    );
+    // Queue pages read queueUpdatedAt newest-first, so earlier selected IDs get later timestamps.
+    const moves = uniqueIds.map((uuid, index) => ({ uuid, queueUpdatedAt: new Date(baseTime + uniqueIds.length - index).toISOString() }));
+    const updated = await withBookmarkRowWriteLock(() => context.repository.updateQueueUpdatedAt(moves));
     this.invalidateMergedRecordsCache();
     if (this.options.getActiveBlobKey) {
       const protectedUpdates: Array<{ readonly id: string; readonly queueUpdatedAt: string }> = [];
@@ -351,7 +350,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
           // Undecryptable relationship rows cannot be moved in the protected store.
         }
       }
-      await context.encryptedPins.updateQueueUpdatedAt(protectedUpdates);
+      await withBookmarkRowWriteLock(() => context.encryptedPins.updateQueueUpdatedAt(protectedUpdates));
       return this.loadRecordsByIds(context, uniqueIds);
     }
     const records: ImageDisplayRecord[] = [];
@@ -413,19 +412,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
   async removeMany(ids: readonly string[]): Promise<{ readonly removedCount: number }> {
     const context = await this.openContext();
     if (!context) return { removedCount: 0 };
-    let removedCount = 0;
-    for (const id of [...new Set(ids)].filter(Boolean)) {
-      const existing = await context.repository.getEncrypted(id);
-      if (!existing) continue;
-      try {
-        const payload = await context.repository.openRecord(existing, context.bookmarkKey.key);
-        await removeLinkedPinStorage(context, payload);
-      } catch {
-        // Still remove the relationship row if its protected side cannot be opened.
-      }
-      await context.repository.remove(existing.uuid);
-      removedCount += 1;
-    }
+    const removedCount = await removeBookmarkRows(context, ids);
     if (removedCount > 0) this.invalidateMergedRecordsCache();
     return { removedCount };
   }
@@ -765,15 +752,4 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
       failedCount,
     };
   }
-}
-
-async function removeLinkedPinStorage(context: BookmarkContext, payload: DurableBookmarkPayloadV1): Promise<void> {
-  if (payload.protectedPin?.encryptedPinId) await context.encryptedPins.remove(payload.protectedPin.encryptedPinId);
-  if (payload.protectedPin?.encryptedThumbnailId) await context.encryptedThumbnails.remove(payload.protectedPin.encryptedThumbnailId);
-  const protectedOriginalBlobId = payload.protectedPin?.storedOriginalBlobId;
-  if (protectedOriginalBlobId) {
-    await context.blobs.remove(protectedOriginalBlobId);
-    return;
-  }
-  if (payload.storedOriginal?.blobId) await context.blobs.remove(payload.storedOriginal.blobId);
 }
