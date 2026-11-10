@@ -66,14 +66,6 @@ jobs:
     env:
       INTEROP_PHOTOS_ROOT: ${{ github.workspace }}/node_modules/.interop-photos
     steps:
-      - name: Mint the chores-dumb token
-        id: chores
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ secrets.CHORES_DUMB_CLIENT_ID }}
-          private-key: ${{ secrets.CHORES_DUMB_PRIVATE_KEY }}
-          permission-contents: write
-
       - name: Resolve release tag
         id: release
         env:
@@ -182,6 +174,16 @@ jobs:
           PCLOUD_CLIENT_ID: ${{ secrets.PCLOUD_CLIENT_ID }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: npm run package:release -- --tag "$RELEASE_TAG"
+
+      # Minted here, after every step that runs repository or dependency code, so
+      # the write credential exists only for the publish step that needs it.
+      - name: Mint the chores-dumb token
+        id: chores
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.CHORES_DUMB_CLIENT_ID }}
+          private-key: ${{ secrets.CHORES_DUMB_PRIVATE_KEY }}
+          permission-contents: write
 
       - name: Create or refresh GitHub Release assets
         env:
