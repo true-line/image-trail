@@ -1,4 +1,5 @@
 import { createDisplayRecord, type ImageDisplayRecord } from '../../core/display-records.js';
+import type { BookmarkStore } from '../../core/bookmark-store.js';
 import type { ImportRestorePreviewState } from '../../core/types.js';
 import {
   classifyRestoreDuplicates,
@@ -296,4 +297,45 @@ export function bookmarkPayloadToDisplayRecord(uuid: string, payload: DurableBoo
     storedOriginal: payload.storedOriginal,
     source: payload.sourceCompatibility ?? 'bookmark',
   });
+}
+
+/**
+ * Saves one restored bookmark. A pin that was private in the backup is saved encrypted or not
+ * at all: returns null when it could not be, so the caller can report it instead of leaving a
+ * plaintext copy behind.
+ */
+async function restoreBookmarkEntry(
+  store: Pick<BookmarkStore, 'save' | 'saveResult'>,
+  entry: { readonly uuid: string; readonly payload: DurableBookmarkPayloadV1 },
+): Promise<ImageDisplayRecord | null> {
+  const record = bookmarkPayloadToDisplayRecord(entry.uuid, entry.payload);
+  if (!entry.payload.protectedPin) return store.save(record);
+  if (!store.saveResult) return null;
+  const result = await store.saveResult(record, { requireEncrypted: true });
+  return result.ok ? result.record : null;
+}
+
+export function lockedPrivatePinsMessage(count: number): string {
+  if (count === 0) return '';
+  return ` ${count} private pin${count === 1 ? ' was' : 's were'} not restored because encryption is locked. Unlock and restore the file again.`;
+}
+
+/** Restores every entry, recording new ids in `recordIdMap` and counting private pins left out. */
+export async function restoreBookmarkEntries(
+  store: Pick<BookmarkStore, 'save' | 'saveResult'>,
+  entries: readonly { readonly uuid: string; readonly payload: DurableBookmarkPayloadV1 }[],
+  recordIdMap: Map<string, string>,
+): Promise<{ readonly importedCount: number; readonly lockedPrivateCount: number }> {
+  let importedCount = 0;
+  let lockedPrivateCount = 0;
+  for (const entry of entries) {
+    const saved = await restoreBookmarkEntry(store, entry);
+    if (saved) {
+      recordIdMap.set(entry.uuid, saved.id);
+      importedCount += 1;
+    } else {
+      lockedPrivateCount += 1;
+    }
+  }
+  return { importedCount, lockedPrivateCount };
 }
