@@ -132,6 +132,8 @@ jobs:
     if: needs.prepare-version-pr.outputs.ready == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # The App credentials are bound to this main-only environment.
+    environment: version-cut
     permissions:
       contents: read # Required only by checkout; writes use the App token.
     steps:
@@ -268,6 +270,8 @@ jobs:
     if: needs.policy.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The App credentials are bound to this main-only environment.
+    environment: version-cut
     permissions:
       contents: read # Required only by checkout; writes use the App token.
     steps:
