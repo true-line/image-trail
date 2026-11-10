@@ -126,7 +126,7 @@ test('canonical bare keys route surfaces and reset privacy-safe capture feedback
   await expectFeedback(page, 'Pinned — unlock encryption to store the original');
   await expect(page.locator(feedbackSelector)).toHaveCount(0, { timeout: 1_800 });
 
-  await page.locator('body').dispatchEvent('keydown', { key: '?', code: 'Slash', shiftKey: true, bubbles: true });
+  await page.keyboard.press('Shift+Slash');
   await expect(page.locator('.image-trail-panel__help-section')).toBeVisible();
   await page.keyboard.press(',');
   await expect(page.locator('.image-trail-panel__settings-section')).toBeVisible();
