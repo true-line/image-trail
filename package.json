@@ -101,7 +101,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
     "valibot": "^1.4.2",
-    "vite": "^8.2.2",
+    "vite": "^8.3.6",
     "vitest": "^4.1.10"
   },
   "overrides": {
@@ -115,9 +115,9 @@
       "js-yaml": "^4.3.1"
     },
     "vite": {
-      "postcss": "^8.5.23"
+      "postcss": "^8.5.32"
     },
-    "postcss": "^8.5.23"
+    "postcss": "^8.5.32"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs}": [
