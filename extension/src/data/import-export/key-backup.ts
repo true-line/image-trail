@@ -120,7 +120,8 @@ export async function importStoredKeyBackupWithPassword(fileContent: string, pas
 }
 
 function stripRuntimeKey<K extends RecoverableKeyKind>(record: StoredKeyRecord<K>): StoredKeyRecord<K> {
-  const { key: _key, ...portable } = record;
+  // `importedAt` is device-local provenance; the backup payload keeps its original shape.
+  const { key: _key, importedAt: _importedAt, ...portable } = record;
   return portable;
 }
 

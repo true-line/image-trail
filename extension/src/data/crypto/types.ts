@@ -22,6 +22,8 @@ export interface StoredKeyRecord<K extends KeyKind = KeyKind> extends KeyReferen
   };
   readonly extractable: boolean;
   readonly key?: CryptoKey;
+  /** Set when the record arrived through a key backup import rather than local setup. */
+  readonly importedAt?: string;
 }
 
 /**
