@@ -103,7 +103,9 @@ The Playwright suite is parallelized at the **spec-file** level (PR #380):
   state left by an earlier test or spec; a test that needs the encrypted-originals
   key or a locked workspace sets that up itself (`ensureBlobKeyCreated`,
   `ensureBlobKeyUnavailable` in `tests/e2e/fixtures.ts`).
-- Result: the E2E CI step dropped from ~3m21s to ~46s.
+- Historical result (PR #380, shared worker profile): the E2E CI step dropped from
+  ~3m21s to ~46s. A fresh profile per test costs a browser launch per test; one
+  local run of the full suite took 6.1 min against 4.7 min with shared profiles.
 
 **The ceiling:** because parallelism is file-level, wall-clock ≈ the **slowest
 single spec file**. With only six spec files we are already near that ceiling —
