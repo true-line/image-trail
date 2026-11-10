@@ -61,6 +61,7 @@ function defaultEnvironment(): PanelMountEnvironment {
  * independently testable.
  */
 export class PanelMount {
+  private hostEl: HTMLElement | null = null;
   private rootEl: HTMLElement | null = null;
   private contextRootEl: HTMLElement | null = null;
   private detachedRootEl: HTMLElement | null = null;
@@ -174,13 +175,17 @@ export class PanelMount {
     // Prefer document.body; fall back to documentElement only when body is absent. The logical
     // expression keeps this clear of the no-document-element-append lint rule.
     (doc.body ?? doc.documentElement).append(host);
+    this.hostEl = host;
   }
 
   /** Removes the mounted host and clears root/styles-ready state. Subscriptions are left intact. */
   teardown(): void {
     if (this.contextRootEl) unmountReactSubtree(this.contextRootEl);
     if (this.detachedRootEl) unmountReactSubtree(this.detachedRootEl);
-    this.environment.document.getElementById(ROOT_ID)?.remove();
+    // Remove the host we created, never an id lookup: a page element reusing our id earlier in
+    // the document would be removed instead and leave the real panel on screen.
+    this.hostEl?.remove();
+    this.hostEl = null;
     this.rootEl = null;
     this.contextRootEl = null;
     this.detachedRootEl = null;
