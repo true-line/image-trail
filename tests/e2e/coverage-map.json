@@ -1131,7 +1131,7 @@
         {
           "type": "playwright-e2e",
           "path": "tests/e2e/import-export-settings.spec.ts",
-          "notes": "Covers key backup export, wrong-password fail-closed import, key backup restore, and unlocking captured originals after key restore without exposing the encryption password or raw CryptoKey material in the backup JSON."
+          "notes": "Covers key backup export, wrong-password fail-closed import, key backup restore, and unlocking captured originals after key restore without exposing the encryption password or raw CryptoKey material in the backup JSON. The export download is started from a link that is never inserted into the host page (unit coverage in tests/dom/export-download.test.ts)."
         }
       ],
       "documentation": "docs/acceptance-tests/key-backup-restore.md"

@@ -145,7 +145,8 @@ export function downloadUrl(url: string, fileName: string): void {
   anchor.href = url;
   anchor.download = fileName;
   anchor.rel = 'noopener';
-  document.body.append(anchor);
+  // Clicked while detached, never inserted into the host page: the click then has no path
+  // through the page's document, so page scripts can neither cancel the export nor read the
+  // link, which may be an object URL or a data URL holding exported or decrypted content.
   anchor.click();
-  anchor.remove();
 }
