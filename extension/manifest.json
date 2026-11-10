@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Image Trail",
+  "name": "Image Trail by True Line AI LLC",
+  "short_name": "Image Trail",
   "description": "Inspect and manage image URL transformations from an in-page panel.",
   "version": "0.27.8",
   "icons": {

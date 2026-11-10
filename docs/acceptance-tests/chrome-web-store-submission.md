@@ -23,6 +23,12 @@ ships in the exact upload package.
 | Privacy policy    | `docs/privacy-and-permissions-review.md` (canonical source; publish a hosted copy of this document as the live CWS URL at submission time) |
 | Promotional video | Not supplied. There is no audited promotional video for v0.26.6.                                                                           |
 
+The store title comes from the manifest `name` of the uploaded package. The audited
+v0.26.6 package declares `Image Trail`, so that is the listing name for now. The
+manifest on `main` declares `Image Trail by True Line AI LLC`; change the Name row and
+the reviewer step only when a package containing that manifest is audited and recorded
+below.
+
 The official listing guidance was re-audited on 2026-08-07. It describes a
 YouTube promotional video among the listing information to provide, while the
 asset guidance treats video as optional promotional media. If the live
