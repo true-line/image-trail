@@ -68,8 +68,11 @@ export class PCloudHttpTransport {
   }
 
   requestForm(credential: PCloudCredential, method: string, form: FormData): Promise<Record<string, unknown>> {
-    form.set('access_token', credential.accessToken);
-    return this.requestBody(credential.apiHost, method, form);
+    // pCloud ignores every field that follows the file part, so the token has to lead the form.
+    const ordered = new FormData();
+    ordered.set('access_token', credential.accessToken);
+    for (const [name, value] of form) if (name !== 'access_token') ordered.append(name, value);
+    return this.requestBody(credential.apiHost, method, ordered);
   }
 
   async download(url: URL): Promise<Response> {
