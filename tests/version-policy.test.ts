@@ -226,7 +226,7 @@ test('version-cut workflow refreshes a checked Changesets PR and tags only fresh
   assert.match(workflow, /gh pr create/u);
   assert.match(workflow, /repository_dispatch:\s*\n\s+types:\s*\n\s+- version-cut-recovery/u);
   assert.doesNotMatch(workflow, /workflow_dispatch:/u);
-  assert.equal(workflow.match(/gh auth setup-git/gu)?.length, 2);
+  assert.equal(workflow.match(/gh auth setup-git/gu)?.length, 1);
   assert.doesNotMatch(workflow, /^\s+token:/mu);
   assert.doesNotMatch(workflow, /gh workflow run ci\.yml/u);
   assert.match(workflow, /actions\/runs\?event=push&head_sha=\$GITHUB_SHA/u);
@@ -273,7 +273,13 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   assert.match(publishJob, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.2/u);
   assert.match(publishJob, /node "\$trusted_validator"/u);
   assert.match(publishJob, /git -c core\.hooksPath=\/dev\/null -c commit\.gpgsign=false commit/u);
-  assert.match(publishJob, /git -c core\.hooksPath=\/dev\/null push/u);
+  // The branch is published through the Git Data API so GitHub signs the commit.
+  assert.match(pushStep, /node "\$RUNNER_TEMP\/trusted-publish-version-commit\.mjs"/u);
+  assert.doesNotMatch(publishJob, /git .*push/u);
+  assert.ok(
+    publishJob.indexOf('cp scripts/publish-signed-version-commit.mjs') < publishJob.indexOf('git apply --index'),
+    'the publisher must be preserved before the artifact patch can replace it',
+  );
   assert.match(verifyStep, /GITHUB_REPOSITORY_OWNER:\$BRANCH/u);
   assert.match(verifyStep, /repos\/\$GITHUB_REPOSITORY\/pulls/u);
   assert.doesNotMatch(verifyStep, /< <\(/u);
@@ -284,7 +290,7 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   assert.match(refreshStep, /gh pr edit "\$PR_NUMBER"/u);
   assert.doesNotMatch(publishJob, /qwts-codex-agent\[bot\]|bot-authored/u);
   const verifyExactHead = publishJob.indexOf('-f head="$GITHUB_REPOSITORY_OWNER:$BRANCH"');
-  const pushBranch = publishJob.indexOf('git -c core.hooksPath=/dev/null push');
+  const pushBranch = publishJob.indexOf('node "$RUNNER_TEMP/trusted-publish-version-commit.mjs"');
   assert.ok(verifyExactHead >= 0, 'the exact same-repo version PR head must be checked');
   assert.ok(pushBranch > verifyExactHead, 'the trusted head lookup must run before the branch refresh');
   assert.ok(
