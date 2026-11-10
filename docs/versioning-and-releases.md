@@ -156,9 +156,11 @@ Before merging:
 3. Run `npm run ci`.
 4. Run `npm run build:release` and inspect
    `extension/dist/build-info.json` for the expected version and release mode.
-5. After these checks pass, merge the version PR without waiting for separate
-   release authorization. The merge is the release-cut action and publishes the
-   corresponding GitHub prerelease.
+5. After these checks pass, merge the version PR. The merge is the release-cut
+   action: it tags the version and starts the Release run.
+6. Approve the pending `release` environment deployment on that run (**Actions →
+   Release → Review deployments**). The prerelease is published only after this
+   approval; an unapproved run stays waiting and publishes nothing.
 
 ## Cutting a release
 
@@ -226,11 +228,12 @@ Both publish paths go through that late mint and only run on a real tag, so
 verify each one the first time it runs after a change to this job:
 
 1. **New release.** Merge a version PR and let the tag start Release. Expected:
-   the mint step succeeds after "Build and package release", the run creates a
+   the run waits for approval of the `release` environment and does nothing
+   until a maintainer approves it; after approval the mint step succeeds after "Build and package release", the run creates a
    prerelease titled `Image Trail vX.Y.Z` authored by `chores-dumb[bot]`, and the
    ZIP and `.sha256` assets are attached and match.
 2. **Refresh.** Run **Actions → Release → Run workflow** from `main` with the
-   same tag. Expected: the run succeeds, the existing release keeps its notes,
+   same tag and approve the deployment. Expected: the run succeeds, the existing release keeps its notes,
    and the ZIP and `.sha256` assets are replaced.
 3. **Failure before publish.** If any step before the mint fails, the log shows
    no "Mint the chores-dumb token" step executed and no release or asset
