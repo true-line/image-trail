@@ -1,5 +1,5 @@
 import type { RecentHistoryOverflowBehavior, RecentSparseRowDisplayMode } from '../core/types.js';
-import type { SearchableMetadataMode } from '../core/metadata-policy.js';
+import { ENCRYPTED_METADATA_MODE_DISCLOSURE, type SearchableMetadataMode } from '../core/metadata-policy.js';
 import {
   ApplyButton,
   formValues,
@@ -107,6 +107,7 @@ export function PrivacySettingsGroup({ settings, disabled, save }: SettingsGroup
         onChange={(checked) => save({ ...settings, privacyModeEnabled: checked })}
       />
       <SettingNote>Privacy mode masks display metadata. The searchable-metadata policy controls new durable writes at rest.</SettingNote>
+      <SettingNote>{ENCRYPTED_METADATA_MODE_DISCLOSURE}</SettingNote>
       <div className="image-trail-destination-settings__grid">
         <SettingField label="Image URLs">
           <select

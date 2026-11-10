@@ -65,3 +65,12 @@ test('metadata changes preserve untouched and always-encrypted fields', () => {
     },
   ]);
 });
+
+test('searchable metadata description does not present the encrypted mode as password protection', () => {
+  const view = createSearchableMetadataSettingsView({ urlDerived: 'encrypted', albumName: 'encrypted', thumbnail: 'encrypted' }, () => {});
+  const text = view.textContent ?? '';
+  assert.match(text, /not protected by your encryption password/u);
+  assert.match(text, /hash can confirm an address they already know/u);
+  assert.match(text, /Only private pins and stored originals are password-protected/u);
+  assert.doesNotMatch(text, /keeps them out of plaintext/u);
+});

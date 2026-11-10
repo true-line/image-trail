@@ -1,4 +1,4 @@
-import { createDisplayRecord, type ImageDisplayRecord } from '../../core/display-records.js';
+import { createDisplayRecord, inlineImageThumbnail, type ImageDisplayRecord } from '../../core/display-records.js';
 import { PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE } from '../../core/bookmark-save-options.js';
 import type { BookmarkStore } from '../../core/bookmark-store.js';
 import type { ImportRestorePreviewState } from '../../core/types.js';
@@ -280,7 +280,7 @@ export function historyPayloadToDisplayRecord(uuid: string, payload: DurableHist
     url: payload.url,
     title: payload.title,
     label: payload.label,
-    thumbnail: payload.thumbnail,
+    thumbnail: inlineImageThumbnail(payload.thumbnail),
     timestamp: payload.capturedAt,
     captureStatus: payload.storedOriginal ? 'captured' : undefined,
     blobId: payload.storedOriginal?.blobId,
@@ -295,7 +295,7 @@ export function bookmarkPayloadToDisplayRecord(uuid: string, payload: DurableBoo
     url: payload.url,
     title: payload.title,
     label: payload.label,
-    thumbnail: payload.thumbnail,
+    thumbnail: inlineImageThumbnail(payload.thumbnail),
     width: payload.width,
     height: payload.height,
     timestamp: payload.bookmarkedAt,

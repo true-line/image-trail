@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { isOwnExtensionSender, withSenderCheckedReferrer } from './message-sender.js';
 import { createUnknownMessageResponse, type ExtensionRequest, type ExtensionResponse } from './messages.js';
 
 /**
@@ -84,4 +85,19 @@ export function dispatchRequest(
   }
   handled.then((result) => sendResponse(entry.respond(result))).catch(() => respondWithFallback(entry, message, sendResponse));
   return true;
+}
+
+/**
+ * Runtime-listener entry point: ignores messages that did not come from this extension, and
+ * strips a referrer a content script is not entitled to claim, before dispatching.
+ */
+export function dispatchRequestFromSender(
+  registry: Partial<Record<ExtensionRequest['type'], AnyMessageDef>>,
+  message: ExtensionRequest,
+  sendResponse: (response: ExtensionResponse) => void,
+  sender: chrome.runtime.MessageSender,
+  runtimeId: string,
+): boolean {
+  if (!isOwnExtensionSender(sender, runtimeId)) return false;
+  return dispatchRequest(registry, withSenderCheckedReferrer(message, sender, runtimeId), sendResponse, { sender });
 }

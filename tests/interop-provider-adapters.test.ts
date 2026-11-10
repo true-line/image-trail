@@ -173,7 +173,10 @@ describe('pCloud interoperability namespace (#588)', () => {
   test('shapes getfilelink and download requests with exact-lifetime DNR rules', async () => {
     const originalChrome = globalThis.chrome;
     const dnrCalls: Array<{
-      readonly addRules?: readonly { readonly id: number; readonly condition: { readonly regexFilter?: string } }[];
+      readonly addRules?: readonly {
+        readonly id: number;
+        readonly condition: { readonly regexFilter?: string; readonly tabIds?: readonly number[] };
+      }[];
       readonly removeRuleIds?: readonly number[];
     }> = [];
     globalThis.chrome = {
@@ -210,9 +213,16 @@ describe('pCloud interoperability namespace (#588)', () => {
         added.map((rule) => rule.condition.regexFilter),
         ['^https://api\\.pcloud\\.com/getfilelink$', '^https://c123\\.pcloud\\.com/download/object\\.bin$'],
       );
+      // Each id is cleared when its rule is installed (a rule left by a stopped worker must
+      // not block the install) and removed again when the request ends.
       assert.deepEqual(
         removed,
-        added.map((rule) => rule.id),
+        added.flatMap((rule) => [rule.id, rule.id]),
+      );
+      assert.deepEqual(
+        added.map((rule) => rule.condition.tabIds),
+        [[-1], [-1]],
+        'only requests that do not come from a tab get the rewritten headers',
       );
     } finally {
       globalThis.chrome = originalChrome;

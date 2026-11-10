@@ -7,7 +7,7 @@ test('RecordRow renders the canonical thumbnail, hierarchy, actions, and stored-
   actions.append(document.createElement('button'));
   const row = createRecordRow({
     className: 'consumer-row',
-    thumbnail: 'https://example.test/thumb.jpg',
+    thumbnail: 'data:image/jpeg;base64,AAAA',
     thumbnailFallback: 'JPG',
     source: 'JPG',
     name: 'photo.jpg',
@@ -22,7 +22,7 @@ test('RecordRow renders the canonical thumbnail, hierarchy, actions, and stored-
   assert.ok(row.root.classList.contains('consumer-row'));
   assert.ok(row.root.classList.contains('is-selected'));
   assert.ok(row.root.classList.contains('is-captured'));
-  assert.equal(row.visual.getAttribute('src'), 'https://example.test/thumb.jpg');
+  assert.equal(row.visual.getAttribute('src'), 'data:image/jpeg;base64,AAAA');
   assert.equal(row.body.querySelector('.image-trail-ds__record-meta')?.textContent, '1920 x 1080');
   assert.equal(row.body.querySelector('.image-trail-ds__record-source')?.textContent, 'JPG');
   assert.equal(row.body.querySelector('.image-trail-ds__record-name')?.textContent, 'photo.jpg');
@@ -69,4 +69,11 @@ test('Gallery RecordRow keeps native button semantics inside its list item', () 
   assert.equal((row.interactionTarget as HTMLButtonElement).type, 'button');
   assert.equal(row.root.dataset['layout'], 'gallery');
   assert.ok(row.visual.classList.contains('image-trail-gallery__thumbnail'));
+});
+
+test('a row renders an inline thumbnail and shows the placeholder for any other thumbnail URL', () => {
+  const inline = createRecordRow({ thumbnailFallback: 'IMG', name: 'row', thumbnail: 'data:image/png;base64,AAAA' });
+  assert.equal(inline.root.querySelector('img')?.getAttribute('src'), 'data:image/png;base64,AAAA');
+  const remote = createRecordRow({ thumbnailFallback: 'IMG', name: 'row', thumbnail: 'https://tracker.test/pixel.gif' });
+  assert.equal(remote.root.querySelector('img'), null);
 });

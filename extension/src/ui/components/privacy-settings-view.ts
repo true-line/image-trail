@@ -1,4 +1,9 @@
-import { isSearchableMetadataMode, type SearchableMetadataMode, type SearchableMetadataPolicy } from '../../core/metadata-policy.js';
+import {
+  ENCRYPTED_METADATA_MODE_DISCLOSURE,
+  isSearchableMetadataMode,
+  type SearchableMetadataMode,
+  type SearchableMetadataPolicy,
+} from '../../core/metadata-policy.js';
 import type { PanelAction, PinSaveStoragePreference } from '../../core/types.js';
 
 export interface PrivatePinSettingsState {
@@ -61,8 +66,7 @@ export function createSearchableMetadataSettingsView(
   heading.textContent = 'Searchable metadata';
   const meta = document.createElement('p');
   meta.className = 'image-trail-panel__settings-empty';
-  meta.textContent =
-    'Controls which optional fields may stay in plaintext searchable metadata on disk. Encrypted keeps them out of plaintext (URLs are hashed). This is separate from Privacy mode, which only masks the display.';
+  meta.textContent = `Controls which optional fields may stay in plaintext searchable metadata on disk. ${ENCRYPTED_METADATA_MODE_DISCLOSURE} This is separate from Privacy mode, which only masks the display.`;
 
   const urlSelect = createMetadataModeSelect(policy.urlDerived);
   const albumSelect = createMetadataModeSelect(policy.albumName);
