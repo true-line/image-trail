@@ -50,3 +50,51 @@ export function withSenderCheckedReferrer<T extends { readonly payload?: unknown
   if (senderOrigin !== null && senderOrigin !== 'null' && originOf(claimed) === senderOrigin) return message;
   return { ...message, payload: { ...payload, referrer: undefined } };
 }
+
+const PRIVATE_IPV4 = [/^127\./u, /^10\./u, /^192\.168\./u, /^169\.254\./u, /^172\.(1[6-9]|2\d|3[01])\./u, /^0\./u];
+
+/** Loopback, link-local, and private-range hosts, plus the names that conventionally resolve to them. */
+export function isPrivateNetworkHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/gu, '');
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return true;
+  if (/^\d+\.\d+\.\d+\.\d+$/u.test(host)) return PRIVATE_IPV4.some((range) => range.test(host));
+  if (!host.includes(':')) return false;
+  if (host === '::1' || host === '::') return true;
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(host);
+  if (mapped?.[1]) return PRIVATE_IPV4.some((range) => range.test(mapped[1] ?? ''));
+  return /^f[cd]/u.test(host) || /^fe[89ab]/u.test(host);
+}
+
+function privateHttpTarget(url: unknown): URL | null {
+  if (typeof url !== 'string') return null;
+  try {
+    const parsed = new URL(url);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && isPrivateNetworkHost(parsed.hostname) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A page on the public internet must not be able to point the extension's privileged fetch at
+ * a device on the user's own network, even when the user granted that host earlier. Pages that
+ * are themselves on a private network, and the extension's own pages, are unaffected.
+ */
+export function publicPageTargetsPrivateNetwork(
+  message: { readonly payload?: unknown },
+  sender: MessageSenderLike,
+  runtimeId: string,
+): boolean {
+  const payload = message.payload;
+  if (!payload || typeof payload !== 'object' || !('url' in payload)) return false;
+  const target = privateHttpTarget((payload as { readonly url?: unknown }).url);
+  if (!target) return false;
+  if (isExtensionPageSender(sender, runtimeId)) return false;
+  const senderUrl = sender.url ?? sender.tab?.url ?? sender.origin;
+  if (!senderUrl) return true;
+  try {
+    return !isPrivateNetworkHost(new URL(senderUrl).hostname);
+  } catch {
+    return true;
+  }
+}
