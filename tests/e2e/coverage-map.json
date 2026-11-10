@@ -1143,7 +1143,11 @@
       "coverage": [
         {
           "type": "unit-dom",
-          "paths": ["tests/data-crypto.test.ts", "tests/indexeddb-protected-pins.test.ts"]
+          "paths": [
+            "tests/data-crypto.test.ts",
+            "tests/indexeddb-protected-pins.test.ts",
+            "tests/background-blob-key-multi-key-unlock.test.ts"
+          ]
         },
         {
           "type": "playwright-e2e",

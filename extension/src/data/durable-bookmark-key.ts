@@ -31,6 +31,16 @@ export async function ensureDurableBookmarkKey(repository: KeysRepository): Prom
   return { reference, key: record.key };
 }
 
+/** Ensures the key for a freshly opened database and closes that connection if it fails, so a retried open does not leak it. */
+export async function ensureDurableBookmarkKeyOrClose(db: IDBDatabase, repository: KeysRepository): Promise<DurableBookmarkKeyContext> {
+  try {
+    return await ensureDurableBookmarkKey(repository);
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+}
+
 function isDurableBookmarkKeyRecord(record: StoredKeyRecord): record is DurableBookmarkKeyRecord {
   return typeof CryptoKey !== 'undefined' && record.kind === 'bookmark' && record.key instanceof CryptoKey;
 }

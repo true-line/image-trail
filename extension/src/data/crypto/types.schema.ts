@@ -58,6 +58,7 @@ export const storedKeyRecordSchema = v.pipe(
     }),
     extractable: v.boolean(),
     key: v.optional(v.instance(CryptoKey)),
+    importedAt: v.optional(v.string()),
   }),
   // Quarantine rows whose reference disagrees with kind/uuid at the IDB boundary, rather
   // than letting a mismatched record hydrate and fail deep in assertKeyReference.

@@ -34,5 +34,5 @@ export interface InteropRuntimeDependencies {
   readonly disconnectICloud: () => Promise<void>;
   readonly cancelICloudOperation: (operationId: string) => Promise<void>;
   readonly openProvider: (provider: InteropProviderId, context: InteropProviderOpenContext) => Promise<InteropRuntimeProviderStore | null>;
-  readonly finalizeSourceRecord: (sourceLocalId: string, sourceUpdatedAt: string) => Promise<void>;
+  readonly finalizeSourceRecord: (sourceLocalId: string, sourceUpdatedAt: string, sourceFingerprint?: string) => Promise<void>;
 }

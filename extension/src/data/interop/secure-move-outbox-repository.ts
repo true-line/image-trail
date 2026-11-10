@@ -17,6 +17,7 @@ export const secureMoveItemSchema = v.object({
   sourceMessageIds: v.optional(v.array(v.string())),
   sourceLocalId: v.string(),
   sourceUpdatedAt: v.optional(timestampSchema),
+  sourceFingerprint: v.optional(v.string()),
   reviewCategory: v.picklist(['eligible', 'duplicate', 'conflict', 'metadata-only', 'unsupported', 'skipped']),
   state: v.picklist(['queued', 'acknowledged', 'finalizing', 'finalized', 'rejected', 'failed']),
   targetLocalId: v.optional(v.nullable(v.string())),
@@ -49,6 +50,7 @@ export interface SecureMoveQueueItem {
   readonly interopId: string;
   readonly sourceLocalId: string;
   readonly sourceUpdatedAt: string;
+  readonly sourceFingerprint: string;
   readonly reviewCategory: InteropReviewCategory;
   readonly path: string;
   readonly ciphertext: Uint8Array;
@@ -160,6 +162,7 @@ export class SecureMoveOutboxRepository {
         ],
         sourceLocalId: queued.sourceLocalId,
         sourceUpdatedAt: queued.sourceUpdatedAt,
+        sourceFingerprint: queued.sourceFingerprint,
         reviewCategory: queued.reviewCategory,
         state: 'queued',
         targetLocalId: null,
