@@ -1,6 +1,14 @@
 import type { Locator, Page, TestInfo, Worker } from '@playwright/test';
 
-import { expect, expectPanelOpen, fixturePaths, openFixturePage, test, togglePanelFromExtensionAction } from './fixtures.js';
+import {
+  ensureBlobKeyUnavailable,
+  expect,
+  expectPanelOpen,
+  fixturePaths,
+  openFixturePage,
+  test,
+  togglePanelFromExtensionAction,
+} from './fixtures.js';
 
 const referenceViewport = { width: 924, height: 540 };
 const narrowViewport = { width: 360, height: 740 };
@@ -105,6 +113,10 @@ test('every dashboard section uses the same explicit Hide/Show header control (#
 
 test('locked capture uses the approved bottom-center pin feedback', async ({ page, serviceWorker }, testInfo) => {
   await openPanel(page, serviceWorker);
+  // The extension profile is worker-scoped, so a spec that set an
+  // encrypted-originals key up in this worker leaves the workspace unlocked.
+  // This assertion is about the locked behaviour, so lock it explicitly.
+  await ensureBlobKeyUnavailable(page);
   await page.keyboard.press('c');
   const toast = page.locator('.image-trail-panel__shortcut-feedback');
   await expect(toast).toHaveText('Pinned — unlock encryption to store the original');

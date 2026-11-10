@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   applyUrlInEditor,
   clearDownloadRequestLog,
-  closeSettings,
+  ensureBlobKeyUnavailable,
   expect,
   expectPanelClosed,
   expectPanelOpen,
@@ -48,17 +48,6 @@ async function expectFeedback(page: Page, copy: string | RegExp): Promise<void> 
   await expect(feedback).toBeVisible();
   await expect(feedback).toHaveText(copy);
   expect(await feedback.textContent()).not.toMatch(/https?:\/\/|blob:/u);
-}
-
-async function ensureBlobKeyUnavailable(page: Page): Promise<void> {
-  await openSettingsGroup(page, 'Encrypted originals');
-  const clear = page.getByRole('button', { name: 'Clear key' });
-  if ((await clear.count()) > 0) {
-    await clear.click();
-    await page.getByRole('button', { name: 'Confirm clear key' }).click();
-    await expectPanelStatusMessage(page, /Encrypted blob key cleared/u);
-  }
-  await closeSettings(page);
 }
 
 async function waitForDownloads(serviceWorker: Worker, expected: number): Promise<void> {
