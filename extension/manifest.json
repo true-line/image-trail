@@ -64,6 +64,9 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "src/password-field/field.html",
+        "src/password-field/field.css",
+        "src/password-field/field.js",
         "src/ui/styles/panel.css",
         "src/ui/styles/interop-workflow.css",
         "src/ui/styles/panel-entry.css",

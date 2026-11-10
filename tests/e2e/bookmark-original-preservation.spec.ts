@@ -7,6 +7,7 @@ import {
   openSettingsGroup,
   test,
   togglePanelFromExtensionAction,
+  fillPanelPassword,
 } from './fixtures.js';
 import { pinCurrentImage } from './current-image-actions.js';
 
@@ -16,7 +17,7 @@ test('re-pinning a captured bookmark preserves its stored original', async ({ pa
   await expectPanelOpen(page);
 
   await openSettingsGroup(page, 'Encrypted originals');
-  await page.getByLabel('New encrypted originals password').fill('bookmark-original-preservation-password');
+  await fillPanelPassword(page, 'New encrypted originals password', 'bookmark-original-preservation-password');
   await page.getByRole('button', { name: 'Create first key' }).click();
   await expect(page.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');
   await page.getByRole('button', { name: 'Close settings' }).click();

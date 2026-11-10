@@ -26,6 +26,8 @@ await mkdir('extension/dist/src/gallery', { recursive: true });
 await cp('extension/src/gallery/gallery.html', 'extension/dist/src/gallery/gallery.html');
 await mkdir('extension/dist/src/destinations', { recursive: true });
 await cp('extension/src/destinations/view.html', 'extension/dist/src/destinations/view.html');
+await mkdir('extension/dist/src/password-field', { recursive: true });
+await cp('extension/src/password-field/field.html', 'extension/dist/src/password-field/field.html');
 if (isInteropFeatureEnabled()) {
   await mkdir('extension/dist/src/interop-pairing', { recursive: true });
   await cp('extension/src/interop-pairing/import.html', 'extension/dist/src/interop-pairing/import.html');
@@ -34,6 +36,7 @@ if (isInteropFeatureEnabled()) {
 const stylesheets = [
   ...(await stylesheetFiles('extension/src/ui/styles')),
   'extension/src/preview/preview.css',
+  'extension/src/password-field/field.css',
   'extension/src/gallery/gallery-tokens.css',
   'extension/src/gallery/gallery.css',
   'extension/src/gallery/gallery-filters.css',

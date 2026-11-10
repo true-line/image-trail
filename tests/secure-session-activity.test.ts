@@ -81,3 +81,25 @@ test('ignores synthetic host-page activity by default', async () => {
 
   assert.equal(sent, 0);
 });
+
+test('activity reported from the password frame shares the throttle with page activity', async () => {
+  let now = 1_000;
+  let sent = 0;
+  const controller = new SecureSessionActivityController({
+    now: () => now,
+    sendActivity: async () => {
+      sent += 1;
+      return { unlocked: true };
+    },
+    onLocked: () => assert.fail('session should remain unlocked'),
+  });
+
+  controller.noteActivity();
+  controller.noteActivity();
+  await flush();
+  assert.equal(sent, 1);
+  now += 15_000;
+  controller.noteActivity();
+  await flush();
+  assert.equal(sent, 2);
+});

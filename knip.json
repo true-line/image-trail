@@ -6,6 +6,7 @@
     "extension/src/destinations/destination-page.tsx",
     "extension/src/gallery/gallery.ts",
     "extension/src/interop-pairing/import.ts",
+    "extension/src/password-field/field.ts",
     "extension/src/preview/disabled-mpegts-worker.ts",
     "extension/src/preview/preview.js",
     "extension/src/ui/**/*.stories.{ts,tsx}",
