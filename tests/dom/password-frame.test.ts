@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { decodePasswordFrameConfig, PASSWORD_FRAME_MESSAGE } from '../../extension/src/core/password-frame-protocol.js';
+import {
+  decodePasswordFrameConfig,
+  isPasswordFrameSender,
+  PASSWORD_FRAME_MESSAGE,
+} from '../../extension/src/core/password-frame-protocol.js';
 import { attachPasswordFrame, PASSWORD_SUBMIT_EVENT, passwordFrameRuntime } from '../../extension/src/ui/components/password-frame.js';
 
 type Listener = (message: unknown, sender: { readonly id?: string; readonly url?: string }) => void;
@@ -100,4 +104,11 @@ test('clearing or disabling the panel input is mirrored into the frame', () => {
 test('frame configuration rejects malformed input', () => {
   assert.equal(decodePasswordFrameConfig('#not-json'), null);
   assert.equal(decodePasswordFrameConfig('#%7B%7D'), null);
+});
+
+test('only the password frame of this extension is accepted as a frame sender', () => {
+  assert.equal(isPasswordFrameSender({ id: ID, url: `${FRAME_URL}#config` }, ID), true);
+  assert.equal(isPasswordFrameSender({ id: ID, url: 'https://evil.test/src/password-field/field.html' }, ID), false);
+  assert.equal(isPasswordFrameSender({ id: 'other', url: FRAME_URL }, ID), false);
+  assert.equal(isPasswordFrameSender({ id: ID }, ID), false);
 });

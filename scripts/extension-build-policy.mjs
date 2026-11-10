@@ -72,7 +72,7 @@ export const EXTENSION_ENTRY_POINTS = {
     outfile: 'extension/dist/src/interop-pairing/import.js',
     format: 'esm',
   },
-  passwordField: {
+  panelInputFrame: {
     entryPoint: 'extension/src/password-field/field.ts',
     outfile: 'extension/dist/src/password-field/field.js',
     format: 'esm',

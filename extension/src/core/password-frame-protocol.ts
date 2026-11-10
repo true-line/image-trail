@@ -59,3 +59,20 @@ export function isPasswordFrameMessage(message: unknown): message is PasswordFra
     typeof value['value'] === 'string'
   );
 }
+
+/**
+ * True when a runtime message came from the password frame of this extension. Content scripts
+ * report the visited page's URL, so an extension-scheme sender URL can only be the frame.
+ */
+export function isPasswordFrameSender(
+  sender: { readonly id?: string | undefined; readonly url?: string | undefined },
+  runtimeId: string,
+): boolean {
+  if (sender.id !== runtimeId || !sender.url) return false;
+  try {
+    const parsed = new URL(sender.url);
+    return parsed.protocol === 'chrome-extension:' && parsed.pathname === `/${PASSWORD_FRAME_PATH}`;
+  } catch {
+    return false;
+  }
+}

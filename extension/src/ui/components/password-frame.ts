@@ -1,6 +1,7 @@
 import {
   encodePasswordFrameConfig,
   isPasswordFrameMessage,
+  isPasswordFrameSender,
   PASSWORD_FRAME_PATH,
   type PasswordFrameConfig,
 } from '../../core/password-frame-protocol.js';
@@ -47,23 +48,12 @@ function setNativeValue(input: HTMLInputElement, value: string): void {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
 }
 
-/** Content scripts report the visited page's URL, so an extension-scheme sender URL can only be the frame. */
-function isPasswordFrameUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'chrome-extension:' && parsed.pathname === `/${PASSWORD_FRAME_PATH}`;
-  } catch {
-    return false;
-  }
-}
-
 function listen(runtime: FrameRuntime): void {
   if (listening) return;
   listening = true;
   runtime.onMessage.addListener((message, sender) => {
     if (!isPasswordFrameMessage(message)) return;
-    if (sender.id !== runtime.id || !isPasswordFrameUrl(sender.url)) return;
+    if (!isPasswordFrameSender(sender, runtime.id)) return;
     const input = receivers.get(message.id)?.deref();
     if (!input) {
       receivers.delete(message.id);
