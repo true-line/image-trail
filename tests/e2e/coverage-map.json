@@ -1020,7 +1020,7 @@
             "tests/dom/maintenance-settings-view.test.ts",
             "tests/dom/keyboard-router.test.ts"
           ],
-          "notes": "Covers synthetic and trusted activation for primary, Queue, and Recent original capture; Queue repair; original deletion confirmation; Queue and Recent record deletion; destructive Backspace; bulk deletion; and C, B, and capture-configurable ArrowDown shortcuts while retaining synthetic non-destructive navigation and panel shortcuts."
+          "notes": "Covers synthetic and trusted activation for primary, Queue, and Recent original capture; Queue repair; original deletion confirmation; Queue and Recent record deletion; destructive Backspace; bulk deletion; and every global page shortcut, which is rejected when synthetic and routed when trusted."
         }
       ],
       "documentation": "docs/acceptance-tests/trusted-privileged-activation.md"
