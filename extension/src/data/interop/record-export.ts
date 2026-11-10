@@ -11,11 +11,13 @@ import { BookmarksRepository, type EncryptedBookmarkRecord } from '../repositori
 import { EncryptedPinsRepository, type EncryptedPinRecord } from '../repositories/encrypted-pins-repository.js';
 import { KeysRepository } from '../repositories/keys-repository.js';
 import { BlobsRepository } from '../repositories/blobs-repository.js';
+import { moveSourceFingerprint } from './move-source-fingerprint.js';
 import type { DurableBookmarkPayloadV1, DurableEncryptedPinPayloadV1, DurableInteropRecordV1 } from '../types.js';
 
 export interface CanonicalRecordExport {
   readonly localId: string;
   readonly sourceUpdatedAt: string;
+  readonly sourceFingerprint: string;
   readonly record: InteropRecord;
   readonly albums: DurableInteropRecordV1['albums'];
   readonly reviewCategory: InteropReviewCategory;
@@ -228,9 +230,13 @@ export class InteropRecordExportStore {
           unsupported += 1;
           continue;
         }
+        // The fingerprint covers exactly the rows this export was derived from or wrote itself, never a
+        // later re-read: a save landing during the export must make finalization refuse, not be adopted.
+        let sourceRow = encrypted;
+        let pinRow = protectedPin?.record;
         if (protectedPin && activeBlobKey) {
           if (!sameCustody(protectedPin.payload.interop, interop) || payload.interop !== undefined) {
-            await encryptedPins.sealAndPut({
+            pinRow = await encryptedPins.sealAndPut({
               id: protectedPin.record.id,
               plainPinId: protectedPin.record.plainPinId,
               urlHash: protectedPin.record.urlHash,
@@ -242,7 +248,7 @@ export class InteropRecordExportStore {
             });
           }
           if (payload.interop) {
-            await bookmarks.sealAndPut(
+            sourceRow = await bookmarks.sealAndPut(
               encrypted.uuid,
               { ...payload, interop: undefined },
               key.key,
@@ -253,7 +259,7 @@ export class InteropRecordExportStore {
             );
           }
         } else if (!sameCustody(payload.interop, interop)) {
-          await bookmarks.sealAndPut(
+          sourceRow = await bookmarks.sealAndPut(
             encrypted.uuid,
             { ...payload, interop },
             key.key,
@@ -263,14 +269,10 @@ export class InteropRecordExportStore {
             encrypted.queueUpdatedAt,
           );
         }
-        const reviewedSource = await bookmarks.getEncrypted(localId);
-        if (!reviewedSource) {
-          unsupported += 1;
-          continue;
-        }
         records.push({
           localId,
-          sourceUpdatedAt: reviewedSource.envelope.updatedAt,
+          sourceUpdatedAt: sourceRow.envelope.updatedAt,
+          sourceFingerprint: await moveSourceFingerprint(sourceRow, pinRow),
           record: interop.record,
           albums: interop.albums,
           reviewCategory: interop.reviewCategory,
