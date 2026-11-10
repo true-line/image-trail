@@ -199,6 +199,28 @@ commit must be on `main`. Otherwise the workflow stops before publishing.
 Rerunning a release refreshes the ZIP and checksum assets with `--clobber`; it
 does not rewrite the release notes.
 
+### Release credential timing
+
+The Release job installs dependencies, runs the hardened E2E smoke test, and
+builds the package with no write credential. It mints the `chores-dumb[bot]`
+`contents: write` token in the step directly before "Create or refresh GitHub
+Release assets", the only step that uses it. Keep the mint there: moving it
+earlier exposes the token to dependency and build code.
+
+Both publish paths go through that late mint and only run on a real tag, so
+verify each one the first time it runs after a change to this job:
+
+1. **New release.** Merge a version PR and let the tag start Release. Expected:
+   the mint step succeeds after "Build and package release", the run creates a
+   prerelease titled `Image Trail vX.Y.Z` authored by `chores-dumb[bot]`, and the
+   ZIP and `.sha256` assets are attached and match.
+2. **Refresh.** Run **Actions → Release → Run workflow** from `main` with the
+   same tag. Expected: the run succeeds, the existing release keeps its notes,
+   and the ZIP and `.sha256` assets are replaced.
+3. **Failure before publish.** If any step before the mint fails, the log shows
+   no "Mint the chores-dumb token" step executed and no release or asset
+   changes.
+
 While Image Trail's repository status is pre-release, the workflow marks GitHub
 Releases as prereleases even though the Chrome manifest uses stable numeric
 versions. Removing that marker requires an explicit release-readiness change;
