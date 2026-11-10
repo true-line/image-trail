@@ -1,5 +1,11 @@
 # image-trail
 
+## 0.27.9
+
+### Patch Changes
+
+- 527e971: Restore "Image Trail by True Line AI LLC" as the public name (store listing, extension name, README, notices) and add the manifest short name "Image Trail" for places where the browser has little room.
+
 ## 0.27.8
 
 ### Patch Changes
