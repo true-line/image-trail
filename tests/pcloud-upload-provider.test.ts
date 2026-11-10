@@ -429,7 +429,7 @@ test('downloadPCloudBackup downloads encrypted JSON and reports local SHA-256 wi
       assert.equal(headers?.['origin'], undefined);
       assert.equal(headers?.['referer'], undefined);
       assert.equal(init?.mode, 'cors');
-      assert.equal(init?.credentials, 'include');
+      assert.equal(init?.credentials, 'omit');
       assert.equal(init?.referrer, 'https://my.pcloud.com/');
       assert.equal(init?.referrerPolicy, 'origin');
       assert.equal(JSON.stringify(dnrCalls).includes('getfilelink'), true);
@@ -492,7 +492,7 @@ test('downloadPCloudBackup retries alternate pCloud hosts after direct-link refe
       assert.equal(headers?.['origin'], undefined);
       assert.equal(headers?.['referer'], undefined);
       assert.equal(init?.mode, 'cors');
-      assert.equal(init?.credentials, 'include');
+      assert.equal(init?.credentials, 'omit');
       assert.equal(init?.referrer, 'https://my.pcloud.com/');
       assert.equal(init?.referrerPolicy, 'origin');
       assert.equal(JSON.stringify(dnrCalls).includes('getfilelink'), true);
