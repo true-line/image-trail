@@ -23,6 +23,7 @@ import {
   test,
   togglePanelFromExtensionAction,
   type ExtensionDownloadRequest,
+  fillPanelPassword,
 } from './fixtures.js';
 import { pinCurrentImage } from './current-image-actions.js';
 
@@ -107,7 +108,7 @@ async function setupEncryptedOriginals(page: Page, serviceWorker: Worker, value 
     await reopenPanel(page, serviceWorker);
     await openEncryptedOriginals(page);
   }
-  await page.getByLabel('New encrypted originals password').fill(value);
+  await fillPanelPassword(page, 'New encrypted originals password', value);
   await page.getByRole('button', { name: 'Create first key' }).click();
   await expectPanelStatusMessage(page, /Encrypted blob storage unlocked with blob:[a-f0-9-]+\./u);
   await expect(page.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');

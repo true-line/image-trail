@@ -229,3 +229,17 @@ test('disposeSubscriptions() invokes every registered handle and is idempotent',
   mount.disposeSubscriptions();
   assert.deepEqual(calls, ['a', 'b', 'c'], 'a second dispose does not re-invoke handles');
 });
+
+test('teardown() removes the mounted host even when a page element reuses the root id', () => {
+  const harness = createHarness();
+  harness.mount.mount();
+  const host = harness.doc.getElementById(ROOT_ID);
+  const decoy = new FakeElement('div');
+  decoy.id = ROOT_ID;
+  harness.doc.created.unshift(decoy);
+
+  harness.mount.teardown();
+
+  assert.equal(host!.removed, true, 'the host created by mount() is removed');
+  assert.equal(decoy.removed, false, 'a page-owned element with the same id is left alone');
+});

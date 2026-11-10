@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { recordHasStoredOriginal, type ImageDisplayRecord } from '../core/display-records.js';
+import { inlineImageThumbnail, recordHasStoredOriginal, type ImageDisplayRecord } from '../core/display-records.js';
 import type { RecallCandidate } from '../core/types.js';
 import { recordDisplayName, recordExtensionLabel, recordMetadataText } from '../ui/components/record-metadata.js';
 import type { DestinationServices, RecallWindow } from './destination-services.js';
@@ -112,7 +112,11 @@ function RecallRow({
     >
       <label>
         <input type="checkbox" checked={selected} onChange={onToggle} />
-        {record.thumbnail && !masked ? <img src={record.thumbnail} alt="" /> : <span aria-hidden="true">{masked ? 'PRIVATE' : 'IMG'}</span>}
+        {inlineImageThumbnail(record.thumbnail) && !masked ? (
+          <img src={inlineImageThumbnail(record.thumbnail)} alt="" />
+        ) : (
+          <span aria-hidden="true">{masked ? 'PRIVATE' : 'IMG'}</span>
+        )}
         <span>
           <strong>{name}</strong>
           <small>{masked ? 'Private durable record' : `${recordExtensionLabel(record)} · ${recordMetadataText(record)}`}</small>

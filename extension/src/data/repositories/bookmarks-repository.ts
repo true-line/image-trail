@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 import { openValidatedJsonEnvelope, sealJsonEnvelope } from '../crypto/envelope.js';
-import type { EncryptedEnvelope } from '../crypto/types.js';
+import type { EncryptedEnvelope, RecordEnvelopeMetadata } from '../crypto/types.js';
 import { encryptedEnvelopeSchema } from '../crypto/types.schema.js';
 import type { StorageUsageSummary } from '../../core/image/capture-result.js';
 import { requestToPromise, transactionDone } from '../idb-helpers.js';
@@ -15,7 +15,7 @@ export interface EncryptedBookmarkRecord {
   readonly queueUpdatedAt: string;
   readonly encryptedByteLength?: number | undefined;
   readonly inlineThumbnailByteLength?: number | undefined;
-  readonly envelope: EncryptedEnvelope<{ readonly recordType: 'bookmark' }>;
+  readonly envelope: EncryptedEnvelope<RecordEnvelopeMetadata<'bookmark'>>;
 }
 
 const encryptedBookmarkRecordSchema = v.object({
@@ -264,7 +264,7 @@ export class BookmarksRepository {
       payloadVersion: 1,
       key,
       keyReference,
-      authenticatedMetadata: { recordType: 'bookmark' as const },
+      authenticatedMetadata: { recordType: 'bookmark' as const, recordId: uuid },
       now,
     });
     const record = {
@@ -288,11 +288,11 @@ export class BookmarksRepository {
 
   async open(uuid: string, key: CryptoKey): Promise<DurableBookmarkPayloadV1 | null> {
     const record = await this.getEncrypted(uuid);
-    return record ? openValidatedJsonEnvelope(record.envelope, key, durableBookmarkPayloadSchema) : null;
+    return record ? openValidatedJsonEnvelope(record.envelope, key, durableBookmarkPayloadSchema, record.uuid) : null;
   }
 
   async openRecord(record: EncryptedBookmarkRecord, key: CryptoKey): Promise<DurableBookmarkPayloadV1> {
-    return openValidatedJsonEnvelope(record.envelope, key, durableBookmarkPayloadSchema);
+    return openValidatedJsonEnvelope(record.envelope, key, durableBookmarkPayloadSchema, record.uuid);
   }
 
   private async backfillStorageUsageMetadata(backfills: readonly BookmarkStorageUsageBackfill[]): Promise<void> {

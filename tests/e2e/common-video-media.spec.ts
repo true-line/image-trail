@@ -19,6 +19,7 @@ import {
   resetExtensionLibrary,
   test,
   togglePanelFromExtensionAction,
+  fillPanelPassword,
 } from './fixtures.js';
 
 const commonFixtureUrl = new URL('./pages/assets/media/common/', import.meta.url);
@@ -146,7 +147,7 @@ test('common video/audio import keeps exact custody, safe preview tiers, and ato
 
 async function setupEncryptedOriginals(page: Page): Promise<void> {
   await openSettingsGroup(page, 'Encrypted originals');
-  await page.getByLabel('New encrypted originals password').fill('common-media-original-password');
+  await fillPanelPassword(page, 'New encrypted originals password', 'common-media-original-password');
   await page.getByRole('button', { name: 'Create first key' }).click();
   await expect(page.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');
   await closeSettings(page);

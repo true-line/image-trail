@@ -32,6 +32,18 @@ Verify that encrypted captured originals have a portable recovery path before en
 - Importing with the wrong backup password fails closed and does not write a key.
 - Re-importing an existing key reference is idempotent or reports that the key is already imported without duplicating it.
 
+## Manual check: exports stay out of the host page
+
+Automated tests run against a DOM double, so confirm this once per release in a packaged Chromium build.
+
+1. Open a page with an image, open DevTools on that page, and run in the page console (top frame, page context):
+   `window.__seen = []; for (const t of ['click', 'DOMNodeInserted']) document.addEventListener(t, (e) => { if (e.target instanceof HTMLAnchorElement) window.__seen.push([t, e.target.href]); }, true); new MutationObserver((m) => m.forEach((r) => r.addedNodes.forEach((n) => n instanceof HTMLAnchorElement && window.__seen.push(['added', n.href])))).observe(document, { childList: true, subtree: true });`
+2. Export a key backup, an encrypted image export, and a plaintext bookmark export from the panel.
+3. Confirm each export starts a real browser download with the expected file name and readable contents.
+4. Run `window.__seen` in the page console.
+
+Expected: `window.__seen` is empty. The page sees no download link, no click on one, and no export URL.
+
 ## Notes
 
 - The backup contains the stored password-wrapped blob key record, not the active non-extractable `CryptoKey`.

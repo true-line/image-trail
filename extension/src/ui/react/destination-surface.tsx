@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 
-import type { ImageDisplayRecord } from '../../core/display-records.js';
+import { inlineImageThumbnail, type ImageDisplayRecord } from '../../core/display-records.js';
 import type { PanelAction, PanelDestinationId, PanelState } from '../../core/types.js';
 import { isCapturedOriginalRecord } from '../components/bookmarks-view.js';
 import { openInteropWorkflow } from '../components/interop-workflow-view.js';
@@ -117,8 +117,8 @@ function GalleryTile({
       disabled={record.privacyStatus === 'locked'}
       onClick={() => dispatch({ name: 'bookmark/load', id: record.id })}
     >
-      {!privacyMasked && record.thumbnail ? (
-        <img src={record.thumbnail} alt="" />
+      {!privacyMasked && inlineImageThumbnail(record.thumbnail) ? (
+        <img src={inlineImageThumbnail(record.thumbnail)} alt="" />
       ) : (
         <span className="image-trail-panel__destination-image-placeholder" aria-hidden="true">
           {privacyMasked ? 'PRIVATE' : 'IMG'}

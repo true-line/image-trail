@@ -203,3 +203,19 @@ test('fetchImageBytes rejects a declared MP4 whose bytes do not validate as comm
     globalThis.fetch = originalFetch;
   }
 });
+
+test('fetchImageBytes refuses a response that a redirect delivered from a private network', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    const response = new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'image/png' } });
+    Object.defineProperty(response, 'url', { value: 'http://192.168.1.10/camera.png' });
+    return response;
+  };
+
+  try {
+    const result = await fetchImageBytes('https://cdn.example.test/image.png', 1024);
+    assert.deepEqual(result, { ok: false, reason: 'fetch-forbidden', message: 'Redirect into a private network was blocked.' });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -59,6 +59,10 @@ jobs:
     if: needs.policy.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Release credentials live in this protected environment: it accepts only
+    # main and v*.*.* tags and waits for a maintainer's approval, so a
+    # dispatch from another branch cannot reach them.
+    environment: release
     permissions:
       actions: read # Required to prove exact-commit complete-suite evidence.
       contents: read # Required only by checkout; writes use the App token.
@@ -66,14 +70,6 @@ jobs:
     env:
       INTEROP_PHOTOS_ROOT: ${{ github.workspace }}/node_modules/.interop-photos
     steps:
-      - name: Mint the chores-dumb token
-        id: chores
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ secrets.CHORES_DUMB_CLIENT_ID }}
-          private-key: ${{ secrets.CHORES_DUMB_PRIVATE_KEY }}
-          permission-contents: write
-
       - name: Resolve release tag
         id: release
         env:
@@ -134,7 +130,7 @@ jobs:
           echo "Release evidence: PR #$pr_number head $pr_head; exact source $source_sha; CI runs $ready_run and $run_id."
 
       - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
@@ -182,6 +178,16 @@ jobs:
           PCLOUD_CLIENT_ID: ${{ secrets.PCLOUD_CLIENT_ID }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: npm run package:release -- --tag "$RELEASE_TAG"
+
+      # Minted here, after every step that runs repository or dependency code, so
+      # the write credential exists only for the publish step that needs it.
+      - name: Mint the chores-dumb token
+        id: chores
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.CHORES_DUMB_CLIENT_ID }}
+          private-key: ${{ secrets.CHORES_DUMB_PRIVATE_KEY }}
+          permission-contents: write
 
       - name: Create or refresh GitHub Release assets
         env:

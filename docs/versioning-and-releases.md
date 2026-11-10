@@ -156,9 +156,11 @@ Before merging:
 3. Run `npm run ci`.
 4. Run `npm run build:release` and inspect
    `extension/dist/build-info.json` for the expected version and release mode.
-5. After these checks pass, merge the version PR without waiting for separate
-   release authorization. The merge is the release-cut action and publishes the
-   corresponding GitHub prerelease.
+5. After these checks pass, merge the version PR. The merge is the release-cut
+   action: it tags the version and starts the Release run.
+6. Approve the pending `release` environment deployment on that run (**Actions →
+   Release → Review deployments**). The prerelease is published only after this
+   approval; an unapproved run stays waiting and publishes nothing.
 
 ## Cutting a release
 
@@ -198,6 +200,44 @@ A supplied or pushed tag must exactly match the package/manifest version and its
 commit must be on `main`. Otherwise the workflow stops before publishing.
 Rerunning a release refreshes the ZIP and checksum assets with `--clobber`; it
 does not rewrite the release notes.
+
+### Release credential custody
+
+The App credentials (`CHORES_DUMB_CLIENT_ID`, `CHORES_DUMB_PRIVATE_KEY`) are read
+through protected environments, not from an arbitrary branch:
+
+- `release` (Release job): accepts only `main` and `v*.*.*` tags and waits for a
+  maintainer's approval. Every release run pauses for that approval.
+- `version-cut` (version PR and tag jobs): accepts only `main`, no approval.
+- The `protect-release-tags` ruleset lets only repository admins and the release
+  App create, move, or delete `v*` tags.
+
+Store the two secrets, and `PCLOUD_CLIENT_ID` for `release`, as environment
+secrets. A repository-level copy would still be readable by a workflow run from
+any branch, so do not keep one.
+
+### Release credential timing
+
+The Release job installs dependencies, runs the hardened E2E smoke test, and
+builds the package with no write credential. It mints the `chores-dumb[bot]`
+`contents: write` token in the step directly before "Create or refresh GitHub
+Release assets", the only step that uses it. Keep the mint there: moving it
+earlier exposes the token to dependency and build code.
+
+Both publish paths go through that late mint and only run on a real tag, so
+verify each one the first time it runs after a change to this job:
+
+1. **New release.** Merge a version PR and let the tag start Release. Expected:
+   the run waits for approval of the `release` environment and does nothing
+   until a maintainer approves it; after approval the mint step succeeds after "Build and package release", the run creates a
+   prerelease titled `Image Trail vX.Y.Z` authored by `chores-dumb[bot]`, and the
+   ZIP and `.sha256` assets are attached and match.
+2. **Refresh.** Run **Actions → Release → Run workflow** from `main` with the
+   same tag and approve the deployment. Expected: the run succeeds, the existing release keeps its notes,
+   and the ZIP and `.sha256` assets are replaced.
+3. **Failure before publish.** If any step before the mint fails, the log shows
+   no "Mint the chores-dumb token" step executed and no release or asset
+   changes.
 
 While Image Trail's repository status is pre-release, the workflow marks GitHub
 Releases as prereleases even though the Chrome manifest uses stable numeric

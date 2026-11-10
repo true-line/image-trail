@@ -2,8 +2,9 @@ import type { PanelAction } from '../../core/types.js';
 import type { SessionInactivityTimeoutMinutes } from '../../core/secure-session-policy.js';
 import { createActionGroup } from './action-group.js';
 import { createFilePickerField, createPasswordField } from './form-controls.js';
+import { onPasswordSubmit } from './password-frame.js';
 import { createBadge } from './primitives.js';
-import { addTrustedClickListener, isTrustedPanelEvent } from './trusted-events.js';
+import { addTrustedClickListener } from './trusted-events.js';
 
 let encryptedOriginalsOpen = false;
 
@@ -133,11 +134,7 @@ export function createEncryptionView(state: EncryptionViewState, dispatch: (acti
   unlock.disabled = state.busy;
   addTrustedClickListener(unlock, unlockWithPassword);
 
-  password.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' || !isTrustedPanelEvent(event)) return;
-    event.preventDefault();
-    unlockWithPassword();
-  });
+  onPasswordSubmit(password, unlockWithPassword);
 
   body.append(
     passwordControl.field,

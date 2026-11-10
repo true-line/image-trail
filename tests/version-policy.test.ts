@@ -211,7 +211,7 @@ test('version-cut workflow refreshes a checked Changesets PR and tags only fresh
   // Branch, PR, and tag writes require a short-lived chores-dumb App token
   // because GITHUB_TOKEN events trigger no downstream workflow and
   // github-actions[bot] is not an authorized Actions actor here.
-  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.2\.0/u);
+  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.3\.0/u);
   assert.equal(workflow.match(/client-id: \$\{\{ secrets\.CHORES_DUMB_CLIENT_ID \}\}/gu)?.length, 2);
   assert.doesNotMatch(workflow, /\bapp-id:/u);
   assert.match(workflow, /GH_TOKEN: \$\{\{ steps\.chores\.outputs\.token \}\}/u);
@@ -226,7 +226,7 @@ test('version-cut workflow refreshes a checked Changesets PR and tags only fresh
   assert.match(workflow, /gh pr create/u);
   assert.match(workflow, /repository_dispatch:\s*\n\s+types:\s*\n\s+- version-cut-recovery/u);
   assert.doesNotMatch(workflow, /workflow_dispatch:/u);
-  assert.equal(workflow.match(/gh auth setup-git/gu)?.length, 2);
+  assert.equal(workflow.match(/gh auth setup-git/gu)?.length, 1);
   assert.doesNotMatch(workflow, /^\s+token:/mu);
   assert.doesNotMatch(workflow, /gh workflow run ci\.yml/u);
   assert.match(workflow, /actions\/runs\?event=push&head_sha=\$GITHUB_SHA/u);
@@ -266,14 +266,20 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   );
   assert.match(prepareJob, /arguments-json: '\["ci"\]'/u);
   assert.match(prepareJob, /npm run changeset:version/u);
-  assert.match(prepareJob, /actions\/upload-artifact@[0-9a-f]{40} # v7\.0\.1/u);
+  assert.match(prepareJob, /actions\/upload-artifact@[0-9a-f]{40} # v7\.0\.2/u);
   assert.doesNotMatch(prepareJob, /RELEASE_TOKEN|GH_TOKEN|contents: write|pull-requests: write/u);
 
   assert.match(publishJob, /needs: prepare-version-pr/u);
-  assert.match(publishJob, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.1/u);
+  assert.match(publishJob, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.2/u);
   assert.match(publishJob, /node "\$trusted_validator"/u);
   assert.match(publishJob, /git -c core\.hooksPath=\/dev\/null -c commit\.gpgsign=false commit/u);
-  assert.match(publishJob, /git -c core\.hooksPath=\/dev\/null push/u);
+  // The branch is published through the Git Data API so GitHub signs the commit.
+  assert.match(pushStep, /node "\$RUNNER_TEMP\/trusted-publish-version-commit\.mjs"/u);
+  assert.doesNotMatch(publishJob, /git .*push/u);
+  assert.ok(
+    publishJob.indexOf('cp scripts/publish-signed-version-commit.mjs') < publishJob.indexOf('git apply --index'),
+    'the publisher must be preserved before the artifact patch can replace it',
+  );
   assert.match(verifyStep, /GITHUB_REPOSITORY_OWNER:\$BRANCH/u);
   assert.match(verifyStep, /repos\/\$GITHUB_REPOSITORY\/pulls/u);
   assert.doesNotMatch(verifyStep, /< <\(/u);
@@ -284,7 +290,7 @@ test('version-cut keeps dependency code off the clean token-bearing runner', () 
   assert.match(refreshStep, /gh pr edit "\$PR_NUMBER"/u);
   assert.doesNotMatch(publishJob, /qwts-codex-agent\[bot\]|bot-authored/u);
   const verifyExactHead = publishJob.indexOf('-f head="$GITHUB_REPOSITORY_OWNER:$BRANCH"');
-  const pushBranch = publishJob.indexOf('git -c core.hooksPath=/dev/null push');
+  const pushBranch = publishJob.indexOf('node "$RUNNER_TEMP/trusted-publish-version-commit.mjs"');
   assert.ok(verifyExactHead >= 0, 'the exact same-repo version PR head must be checked');
   assert.ok(pushBranch > verifyExactHead, 'the trusted head lookup must run before the branch refresh');
   assert.ok(
@@ -448,7 +454,13 @@ test('zizmor is digest-pinned without a disallowed wrapper action and enforces t
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(workflow, /--persona auditor --format github/u);
   assert.match(workflow, /--config \.github\/zizmor\.yml \./u);
-  assert.match(config, /allow:\s*\n\s+- CHORES_DUMB_CLIENT_ID\s*\n\s+- CHORES_DUMB_PRIVATE_KEY/u);
+  assert.doesNotMatch(
+    config,
+    /CHORES_DUMB_|PCLOUD_CLIENT_ID/u,
+    'release credentials are environment secrets, not allow-listed repo secrets',
+  );
+  assert.match(readFileSync('.github/workflows/release.yml', 'utf8'), /\n {4}environment: release\n/u);
+  assert.equal(readFileSync('.github/workflows/version-cut.yml', 'utf8').match(/\n {4}environment: version-cut\n/gu)?.length, 2);
   assert.match(config, /['"]\*['"]: hash-pin/u);
   assert.doesNotMatch(config, /ref-pin/u);
   assert.equal(dependabot.match(/default-days: 7/gu)?.length, 2);
@@ -457,7 +469,7 @@ test('zizmor is digest-pinned without a disallowed wrapper action and enforces t
 test('release builds do not consume dependency caches or interpolate the tag in shell source', () => {
   const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
 
-  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.2\.0/u);
+  assert.match(workflow, /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3\.3\.0/u);
   assert.match(workflow, /client-id: \$\{\{ secrets\.CHORES_DUMB_CLIENT_ID \}\}/u);
   assert.doesNotMatch(workflow, /\bapp-id:/u);
   assert.match(workflow, /GH_TOKEN: \$\{\{ steps\.chores\.outputs\.token \}\}/u);

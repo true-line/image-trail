@@ -104,8 +104,19 @@ test('invariant: the recents layer exposes no durable browser-storage write path
   const compositionRoot = readFileSync(resolve(process.cwd(), 'extension/src/background/service-worker.ts'), 'utf8');
   assert.match(
     compositionRoot,
-    /new\s+RecentHistoryCache\s*\(\s*chrome\.storage\?\.session\s*\)/,
-    'the production recents cache must use browser-session storage so MV3 worker suspension does not clear it',
+    /new\s+RecentHistoryCache\s*\(\s*sessionStorageForContext\(\)\s*\)/,
+    'the production recents cache must take its storage from sessionStorageForContext()',
+  );
+  const sessionContext = readFileSync(resolve(process.cwd(), 'extension/src/background/session-storage-context.ts'), 'utf8');
+  assert.match(
+    sessionContext,
+    /return chrome\.storage\?\.session;/,
+    'the regular instance must use browser-session storage so MV3 worker suspension does not clear recents',
+  );
+  assert.equal(
+    durableChromeStoragePattern.test(sessionContext),
+    false,
+    'the session storage selector must never reach durable chrome.storage',
   );
 });
 

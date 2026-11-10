@@ -10,6 +10,7 @@ interface ExtensionCommandManifest {
   readonly action?: {
     readonly default_icon?: Record<string, string>;
   };
+  readonly incognito?: string;
   readonly permissions?: readonly string[];
   readonly host_permissions?: readonly string[];
   readonly optional_host_permissions?: readonly string[];
@@ -122,4 +123,8 @@ test('manifest exposes panel stylesheet imports only through session-scoped URLs
   for (const stylesheet of stylesheetDependencyClosure('src/ui/styles/panel-entry.css')) {
     assert.ok(resources.includes(stylesheet), `${stylesheet} should be web-accessible`);
   }
+});
+
+test('manifest isolates incognito windows in their own extension instance', () => {
+  assert.equal(loadManifest().incognito, 'split', 'incognito activity must not share Recents, caches, or keys with regular windows');
 });

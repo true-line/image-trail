@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { PCloudApiError, PCloudHttpTransport, pCloudDownloadUrl } from '../extension/src/background/pcloud-http-transport.js';
+import {
+  clearStalePCloudHeaderRules,
+  PCloudApiError,
+  PCloudHttpTransport,
+  pCloudDownloadUrl,
+} from '../extension/src/background/pcloud-http-transport.js';
 
 const credential = { accessToken: 'interop-secret', apiHost: 'api.pcloud.com' } as const;
 
@@ -57,4 +62,30 @@ test('shared pCloud transport accepts only HTTPS pCloud download locations', () 
   assert.equal(pCloudDownloadUrl('c123.pcloud.com', '/download/object.bin').toString(), 'https://c123.pcloud.com/download/object.bin');
   assert.throws(() => pCloudDownloadUrl('attacker.example', '/object.bin'), /unexpected download location/u);
   assert.throws(() => pCloudDownloadUrl('pcloud.com', '@attacker.example/object.bin'), /unexpected download location/u);
+});
+
+test('stale header rules in the owned id range are removed, others are left alone', async () => {
+  const originalChrome = globalThis.chrome;
+  const removed: number[][] = [];
+  globalThis.chrome = {
+    declarativeNetRequest: {
+      getSessionRules: async () => [{ id: 5 }, { id: 900199 }, { id: 900200 }, { id: 900207 }, { id: 1_000_199 }, { id: 1_000_200 }],
+      updateSessionRules: async (input: { removeRuleIds?: number[] }) => {
+        removed.push(input.removeRuleIds ?? []);
+      },
+    },
+  } as unknown as typeof chrome;
+  try {
+    await clearStalePCloudHeaderRules();
+    assert.deepEqual(removed, [[900200, 900207, 1_000_199]]);
+
+    removed.length = 0;
+    globalThis.chrome = {
+      declarativeNetRequest: { getSessionRules: async () => [{ id: 5 }], updateSessionRules: async () => removed.push([]) },
+    } as unknown as typeof chrome;
+    await clearStalePCloudHeaderRules();
+    assert.deepEqual(removed, [], 'no update call when nothing is stale');
+  } finally {
+    globalThis.chrome = originalChrome;
+  }
 });

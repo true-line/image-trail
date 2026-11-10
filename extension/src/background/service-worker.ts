@@ -8,6 +8,7 @@ import { IndexedDbWorkspaceLayoutStore } from '../data/workspace-layout-controll
 import { IndexedDbUrlTemplateStore } from '../data/url-template-controller.js';
 import { createUrlMetadataStores, reconcilePersistedUrlMetadataPolicy } from '../data/url-metadata-stores.js';
 import { RecentHistoryCache } from './recent-history-cache.js';
+import { sessionStorageForContext } from './session-storage-context.js';
 import { configureBlobKeySessionStorage, restoreActiveBlobKey } from '../data/crypto/blob-keyring.js';
 import { openBlobPayload, sealBlobPayload } from '../data/crypto/binary-envelope.js';
 import { createEncryptedImageFile } from '../data/import-export/encrypted-image.js';
@@ -69,7 +70,7 @@ import type { ImportEncryptedImageMessage } from './messages.js';
 import { ImageRequestManager } from './image-request-manager.js';
 import { extractOrigin, hasOriginPermission, requestOriginPermission } from './permissions.js';
 import { findDeletableOrphanBlobIds } from './orphaned-blobs.js';
-import { defineMessage, dispatchRequest, type MessageDef } from './message-dispatch.js';
+import { defineMessage, dispatchRequestFromSender, type MessageDef } from './message-dispatch.js';
 import * as requestSchemas from './message-schemas.js';
 import type { ExtensionRequest, ExtensionResponse } from './messages.js';
 import type {
@@ -102,11 +103,7 @@ const TOGGLE_BUILD_IDENTITY_COMMAND = 'toggle-build-info-overlay';
 const BROWSER_COMMAND_ACTIONS = new Map(BROWSER_COMMAND_SHORTCUTS.map((shortcut) => [shortcut.command, shortcut.action]));
 const SUPPORTED_PAGE_PATTERN = /^https?:\/\//u;
 const imageRequests = new ImageRequestManager();
-try {
-  configureBlobKeySessionStorage(chrome.storage?.session);
-} catch {
-  configureBlobKeySessionStorage(undefined);
-}
+configureBlobKeySessionStorage(sessionStorageForContext());
 const bookmarkStore = new IndexedDbBookmarkStore({
   getActiveBlobKey: restoreActiveBlobKey,
   getPinSaveStoragePreference: async () => (await loadLocalSettings()).pinSaveStoragePreference,
@@ -119,7 +116,7 @@ const { parsedFieldStateStore, urlReviewStatusStore, reconcileSearchableMetadata
   getSearchableMetadataPolicy: async () => (await loadLocalSettings()).searchableMetadataPolicy,
 });
 const urlTemplateStore = new IndexedDbUrlTemplateStore();
-const recentHistoryCache = new RecentHistoryCache(chrome.storage?.session);
+const recentHistoryCache = new RecentHistoryCache(sessionStorageForContext());
 const { notifyLibraryChange, notifySecureSessionChange } = createChangeNotifiers(chrome.runtime, chrome.tabs);
 /** Composition-root context handed to extracted handler modules; see {@link ServiceWorkerContext}. */
 const context: ServiceWorkerContext = {
@@ -741,7 +738,7 @@ const messageRegistry = {
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (!isExtensionRequest(message)) return false;
-  return dispatchRequest(messageRegistry, message, sendResponse, { sender });
+  return dispatchRequestFromSender(messageRegistry, message, sendResponse, sender, chrome.runtime.id);
 });
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {

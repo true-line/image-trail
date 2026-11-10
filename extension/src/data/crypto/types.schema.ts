@@ -1,6 +1,14 @@
 import * as v from 'valibot';
 import type { Assert, MutuallyAssignable } from '../../core/schema-assert.js';
-import type { EncryptedEnvelope, EncryptionAlgorithm, KeyKind, KeyReference, KeyWrappingMode, StoredKeyRecord } from './types.js';
+import type {
+  EncryptedEnvelope,
+  RecordEnvelopeMetadata,
+  EncryptionAlgorithm,
+  KeyKind,
+  KeyReference,
+  KeyWrappingMode,
+  StoredKeyRecord,
+} from './types.js';
 
 export const encryptionAlgorithmSchema = v.picklist(['AES-GCM']);
 
@@ -62,7 +70,7 @@ export const storedKeyRecordSchema = v.pipe(
  */
 export function encryptedEnvelopeSchema<TRecordType extends string>(
   recordType: TRecordType,
-): v.GenericSchema<unknown, EncryptedEnvelope<{ readonly recordType: TRecordType }>> {
+): v.GenericSchema<unknown, EncryptedEnvelope<RecordEnvelopeMetadata<TRecordType>>> {
   return v.object({
     schemaVersion: v.literal(1),
     payloadVersion: v.number(),
@@ -72,8 +80,9 @@ export function encryptedEnvelopeSchema<TRecordType extends string>(
     key: keyReferenceSchema,
     createdAt: v.string(),
     updatedAt: v.string(),
-    authenticatedMetadata: v.object({ recordType: v.literal(recordType) }),
-  }) as v.GenericSchema<unknown, EncryptedEnvelope<{ readonly recordType: TRecordType }>>;
+    // Key order is part of the authenticated bytes: keep `recordType` before `recordId`.
+    authenticatedMetadata: v.object({ recordType: v.literal(recordType), recordId: v.optional(v.string()) }),
+  }) as v.GenericSchema<unknown, EncryptedEnvelope<RecordEnvelopeMetadata<TRecordType>>>;
 }
 
 type _AssertEncryptionAlgorithm = Assert<MutuallyAssignable<v.InferOutput<typeof encryptionAlgorithmSchema>, EncryptionAlgorithm>>;

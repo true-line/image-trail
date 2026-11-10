@@ -42,18 +42,24 @@ function stubChromeSendMessage(sendMessage: (message: unknown) => Promise<unknow
   };
 }
 
-test('downloadUrl clicks a temporary anchor and removes it from the document', () => {
+test('downloadUrl clicks a detached anchor that the host page never sees', () => {
   const anchors = captureAnchorClicks();
+  const inserted: Node[] = [];
+  const observer = new MutationObserver((records) => inserted.push(...records.flatMap((record) => [...record.addedNodes])));
+  observer.observe(document.documentElement, { childList: true, subtree: true });
   try {
     downloadUrl('https://example.test/one.jpg', 'one.jpg');
+    inserted.push(...observer.takeRecords().flatMap((record) => [...record.addedNodes]));
   } finally {
+    observer.disconnect();
     anchors.restore();
   }
 
   assert.equal(anchors.clicks.length, 1);
   assert.equal(anchors.clicks[0]?.href, 'https://example.test/one.jpg');
   assert.equal(anchors.clicks[0]?.download, 'one.jpg');
-  assert.equal(anchors.clicks[0]?.connectedOnClick, true);
+  assert.equal(anchors.clicks[0]?.connectedOnClick, false, 'the link is never part of the page document');
+  assert.deepEqual(inserted, [], 'nothing is inserted into the page document');
   assert.equal(document.querySelector('a'), null);
 });
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Image Trail",
+  "name": "Image Trail by True Line AI LLC",
   "description": "Inspect and manage image URL transformations from an in-page panel.",
-  "version": "0.27.4",
+  "version": "0.27.5",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -58,11 +58,15 @@
     "service_worker": "src/background/service-worker.js",
     "type": "module"
   },
+  "incognito": "split",
   "permissions": ["activeTab", "scripting", "downloads", "identity", "storage", "declarativeNetRequestWithHostAccess"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "web_accessible_resources": [
     {
       "resources": [
+        "src/password-field/field.html",
+        "src/password-field/field.css",
+        "src/password-field/field.js",
         "src/ui/styles/panel.css",
         "src/ui/styles/interop-workflow.css",
         "src/ui/styles/panel-entry.css",

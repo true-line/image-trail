@@ -14,6 +14,7 @@ import {
   openSettingsGroup,
   test,
   togglePanelFromExtensionAction,
+  fillPanelPassword,
 } from './fixtures.js';
 import { pinCurrentImage } from './current-image-actions.js';
 import { detachHistory } from './workspace-test-helpers.js';
@@ -57,7 +58,7 @@ test('one secure lock conceals and restores panel, detached, destination, Galler
     if (typeof sourceTabId !== 'number') throw new Error(`Could not resolve source tab for ${page.url()}`);
 
     await openSettingsGroup(page, 'Encrypted originals');
-    await page.getByLabel('New encrypted originals password').fill('secure-session-test-password');
+    await fillPanelPassword(page, 'New encrypted originals password', 'secure-session-test-password');
     await page.getByRole('button', { name: 'Create first key' }).click();
     await expect(page.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');
     await closeSettings(page);

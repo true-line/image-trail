@@ -1,3 +1,4 @@
+import type { ImageDisplayRecord } from '../../core/display-records.js';
 import type { BookmarkStore } from '../../core/types.js';
 import { noopLibraryChangeNotifier, type LibraryChangeNotifier } from '../library-change-notifier.js';
 import { defineMessage, type MessageDef } from '../message-dispatch.js';
@@ -73,7 +74,15 @@ export function createBookmarkMessageRegistry({
     [MessageType.SaveBookmark]: defineMessage({
       requestSchema: requestSchemas.saveBookmarkRequestSchema,
       handle: async (message: SaveBookmarkMessage) => {
-        const record = await bookmarkStore.save(message.payload.record, message.payload.options);
+        let record: ImageDisplayRecord;
+        try {
+          record = await bookmarkStore.save(message.payload.record, message.payload.options);
+        } catch (error) {
+          // A save that must be encrypted reports why it failed, so restore can tell a locked
+          // key from a storage failure. Other saves keep the generic fallback reply.
+          if (!message.payload.options?.requireEncrypted) throw error;
+          return { ok: false as const, message: error instanceof Error ? error.message : 'Bookmark save failed.' };
+        }
         notifyLibraryChange({ topic: 'bookmarks', reason: 'bookmark-saved', recordIds: [record.id] });
         return { ok: true as const, record };
       },

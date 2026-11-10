@@ -1,0 +1,36 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 28px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #111;
+  color: #fff;
+  padding: 5px 6px;
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+input:focus {
+  outline: 1px solid #8fd;
+  outline-offset: -1px;
+  border-color: #8fd;
+}
+
+input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

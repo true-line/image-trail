@@ -42,8 +42,8 @@ export class SecureSessionActivityController {
     this.target = null;
   }
 
-  private readonly handleActivity = (event: Event): void => {
-    if (!this.isTrustedActivity(event)) return;
+  /** Records activity observed somewhere other than `target`, such as typing in the password frame. */
+  noteActivity(): void {
     const now = this.now();
     if (now - this.lastSentAt < this.throttleMs) return;
     this.lastSentAt = now;
@@ -53,5 +53,9 @@ export class SecureSessionActivityController {
         if (!result.unlocked && result.message) this.deps.onLocked(result.message);
       })
       .catch(() => {});
+  }
+
+  private readonly handleActivity = (event: Event): void => {
+    if (this.isTrustedActivity(event)) this.noteActivity();
   };
 }

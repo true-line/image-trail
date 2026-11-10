@@ -1020,7 +1020,7 @@
             "tests/dom/maintenance-settings-view.test.ts",
             "tests/dom/keyboard-router.test.ts"
           ],
-          "notes": "Covers synthetic and trusted activation for primary, Queue, and Recent original capture; Queue repair; original deletion confirmation; Queue and Recent record deletion; destructive Backspace; bulk deletion; and C, B, and capture-configurable ArrowDown shortcuts while retaining synthetic non-destructive navigation and panel shortcuts."
+          "notes": "Covers synthetic and trusted activation for primary, Queue, and Recent original capture; Queue repair; original deletion confirmation; Queue and Recent record deletion; destructive Backspace; bulk deletion; and every global page shortcut, which is rejected when synthetic and routed when trusted."
         }
       ],
       "documentation": "docs/acceptance-tests/trusted-privileged-activation.md"
@@ -1120,6 +1120,23 @@
       "documentation": "docs/acceptance-tests/oversized-original-is-bounded.md"
     },
     {
+      "id": "panel-password-entry-is-isolated",
+      "acceptance": "Panel password entry is isolated",
+      "repoPath": "docs/acceptance-tests/panel-password-entry-is-isolated.md",
+      "coverage": [
+        {
+          "type": "unit-dom",
+          "paths": ["tests/dom/password-frame.test.ts"]
+        },
+        {
+          "type": "playwright-e2e",
+          "path": "tests/e2e/import-export-settings.spec.ts",
+          "notes": "Every in-page password field is filled through the extension-origin frame, covering key creation, unlock, key backup export and import, cloud backup, and the workspace lock screen. Host-page keystroke observation is a manual check in the acceptance document."
+        }
+      ],
+      "documentation": "docs/acceptance-tests/panel-password-entry-is-isolated.md"
+    },
+    {
       "id": "key-backup-restore",
       "acceptance": "Key backup restore",
       "repoPath": "docs/acceptance-tests/key-backup-restore.md",
@@ -1131,7 +1148,7 @@
         {
           "type": "playwright-e2e",
           "path": "tests/e2e/import-export-settings.spec.ts",
-          "notes": "Covers key backup export, wrong-password fail-closed import, key backup restore, and unlocking captured originals after key restore without exposing the encryption password or raw CryptoKey material in the backup JSON."
+          "notes": "Covers key backup export, wrong-password fail-closed import, key backup restore, and unlocking captured originals after key restore without exposing the encryption password or raw CryptoKey material in the backup JSON. The export download is started from a link that is never inserted into the host page (unit coverage in tests/dom/export-download.test.ts)."
         }
       ],
       "documentation": "docs/acceptance-tests/key-backup-restore.md"
@@ -1570,9 +1587,10 @@
             "tests/searchable-metadata-store.test.ts",
             "tests/url-metadata-privacy.test.ts",
             "tests/thumbnail-at-rest.test.ts",
-            "tests/dom/settings-view.test.ts"
+            "tests/dom/settings-view.test.ts",
+            "tests/dom/privacy-settings-view.test.ts"
           ],
-          "notes": "Covers the policy model (compatible URL/album defaults, encrypted-only thumbnails, URL index-key derivation, guards, and legacy local-settings sanitize), storage inspection proving locked-session thumbnail bytes stay inside an AES-GCM bookmark envelope, the durable store keeping the raw URL index under the default while an opt-in encrypted policy hashes only NEW records yet stays findable/dedupable by real URL, dual-encoding bookmark lookup, AES-GCM parsed-field and URL-review rows with opaque host/URL keys, bidirectional legacy reconciliation, stale writes, retention, clear filters, malformed-row redaction, settings-race serialization, and both Settings surfaces reporting the immutable encrypted thumbnail policy."
+          "notes": "Covers the policy model (compatible URL/album defaults, encrypted-only thumbnails, URL index-key derivation, guards, and legacy local-settings sanitize), storage inspection proving locked-session thumbnail bytes stay inside an AES-GCM bookmark envelope, the durable store keeping the raw URL index under the default while an opt-in encrypted policy hashes only NEW records yet stays findable/dedupable by real URL, dual-encoding bookmark lookup, AES-GCM parsed-field and URL-review rows with opaque host/URL keys, bidirectional legacy reconciliation, stale writes, retention, clear filters, malformed-row redaction, settings-race serialization, both Settings surfaces reporting the immutable encrypted thumbnail policy, and the Settings description stating that the encrypted mode is not password protection."
         },
         {
           "type": "playwright-e2e",
@@ -1784,6 +1802,30 @@
         }
       ],
       "documentation": "docs/testing-strategy.md"
+    },
+    {
+      "id": "restore-inline-thumbnails-only",
+      "acceptance": "Restored records render only inline image thumbnails",
+      "coverage": [
+        {
+          "type": "unit-dom",
+          "paths": ["tests/restore-import-preview.test.ts"],
+          "notes": "Covers history and bookmark payload mapping: an inline data:image thumbnail is kept and any other thumbnail URL is dropped so the placeholder renders."
+        }
+      ],
+      "documentation": "docs/acceptance-tests/restore-inline-thumbnails.md"
+    },
+    {
+      "id": "private-pins-stay-private",
+      "acceptance": "Private pins are never re-saved or restored as unencrypted pins",
+      "coverage": [
+        {
+          "type": "unit-dom",
+          "paths": ["tests/indexeddb-private-pin-custody.test.ts"],
+          "notes": "Covers locked re-pin of an existing private pin, required-encrypted saves while locked and under the plaintext preference, the private marker in exports, and restore skipping and counting private pins when encryption is unavailable."
+        }
+      ],
+      "documentation": "docs/acceptance-tests/private-pins-stay-private.md"
     }
   ]
 }

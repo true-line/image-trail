@@ -34,8 +34,6 @@ function shortcutBinding(shortcut: (typeof PAGE_SHORTCUTS)[number]): KeyBinding 
 
 export const DEFAULT_BINDINGS: KeyBinding[] = PAGE_SHORTCUTS.map(shortcutBinding);
 
-const TRUSTED_ACTIVATION_ACTIONS = new Set(['capture-current', 'pin-current', 'capture-and-bookmark', 'down-arrow']);
-
 export function classifyTarget(event: KeyboardEvent): KeyTarget {
   const composedPath = event.composedPath?.() ?? [];
   const composedTarget = composedPath[0];
@@ -145,11 +143,13 @@ export class KeyboardRouter {
     const target = classifyTarget(event);
     if (isTrustedActivation(event) && target !== 'typing' && target !== 'record-row') this.setShiftModifier(event.shiftKey);
     if (event.metaKey || event.ctrlKey || event.altKey) return;
+    // Every shortcut needs a real key press: navigation starts extension-privileged image
+    // requests, so a host-page script must not be able to drive it with dispatched events.
+    if (!isTrustedActivation(event)) return;
 
     for (const binding of this.bindings) {
       if (matchesBinding(event, binding)) {
         if (!shouldRouteKeyboardShortcut(target, binding.action, binding.key)) return;
-        if (TRUSTED_ACTIVATION_ACTIONS.has(binding.action) && !isTrustedActivation(event)) return;
         if (!this.handler(binding.action)) return;
         event.preventDefault();
         event.stopPropagation();

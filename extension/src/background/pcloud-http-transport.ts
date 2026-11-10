@@ -2,6 +2,10 @@ import type { PCloudApiHost } from '../core/cloud/pcloud-provider.js';
 import { numberOrUndefined } from './pcloud-provider-utils.js';
 
 const PCLOUD_REQUEST_HEADER_RULE_ID_BASE = 900199;
+/** Ids above the base that belong to this module; far more than one worker lifetime allocates. */
+const PCLOUD_REQUEST_HEADER_RULE_ID_SPAN = 100_000;
+/** `chrome.tabs.TAB_ID_NONE`: the request does not come from a tab. */
+const NO_TAB_ID = -1;
 
 export interface PCloudCredential {
   readonly accessToken: string;
@@ -27,6 +31,24 @@ export class PCloudApiError extends Error {
 
 let pcloudRequestHeaderRuleId = PCLOUD_REQUEST_HEADER_RULE_ID_BASE;
 
+/**
+ * Removes every header rule this module owns. Session rules outlive the worker that added
+ * them while the id counter above restarts, so rules left by a stopped worker (including
+ * unscoped ones from an older version) would otherwise stay active until their id is reused.
+ */
+export async function clearStalePCloudHeaderRules(): Promise<void> {
+  if (typeof chrome === 'undefined' || !chrome.declarativeNetRequest?.getSessionRules) return;
+  const stale = (await chrome.declarativeNetRequest.getSessionRules())
+    .map((rule) => rule.id)
+    .filter(
+      (id) => id > PCLOUD_REQUEST_HEADER_RULE_ID_BASE && id <= PCLOUD_REQUEST_HEADER_RULE_ID_BASE + PCLOUD_REQUEST_HEADER_RULE_ID_SPAN,
+    );
+  if (stale.length > 0) await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: stale });
+}
+
+/** Resolved once the worker's start-up sweep has run; every rule install waits for it. */
+const staleRulesCleared = clearStalePCloudHeaderRules().catch(() => undefined);
+
 /** Shared request mechanics only; callers continue to own credential custody and product error vocabulary. */
 export class PCloudHttpTransport {
   constructor(private readonly options: PCloudHttpTransportOptions) {}
@@ -46,8 +68,11 @@ export class PCloudHttpTransport {
   }
 
   requestForm(credential: PCloudCredential, method: string, form: FormData): Promise<Record<string, unknown>> {
-    form.set('access_token', credential.accessToken);
-    return this.requestBody(credential.apiHost, method, form);
+    // pCloud ignores every field that follows the file part, so the token has to lead the form.
+    const ordered = new FormData();
+    ordered.set('access_token', credential.accessToken);
+    for (const [name, value] of form) if (name !== 'access_token') ordered.append(name, value);
+    return this.requestBody(credential.apiHost, method, ordered);
   }
 
   async download(url: URL): Promise<Response> {
@@ -78,7 +103,8 @@ export class PCloudHttpTransport {
         ...(encoded
           ? {
               mode: 'cors' as const,
-              credentials: 'include' as const,
+              // The access token in the body authenticates the call. The user's pCloud web cookies are never sent.
+              credentials: 'omit' as const,
               referrer: this.options.referrer,
               referrerPolicy: 'origin' as const,
               headers: {
@@ -117,9 +143,13 @@ export class PCloudHttpTransport {
 
   private async installRequestHeaderRule(url: string): Promise<() => Promise<void>> {
     if (typeof chrome === 'undefined' || !chrome.declarativeNetRequest?.updateSessionRules) return async () => {};
+    await staleRulesCleared;
     pcloudRequestHeaderRuleId += 1;
     const ruleId = pcloudRequestHeaderRuleId;
     await chrome.declarativeNetRequest.updateSessionRules({
+      // Session rules outlive a worker restart while the counter above does not: clear the id
+      // first so a rule left behind by a stopped worker cannot make this call fail.
+      removeRuleIds: [ruleId],
       addRules: [
         {
           id: ruleId,
@@ -142,6 +172,10 @@ export class PCloudHttpTransport {
           condition: {
             regexFilter: `^${escapeRegExp(url)}$`,
             resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST],
+            // Only this extension's own worker request gets the rewritten headers, never a
+            // page's request to the same address.
+            tabIds: [NO_TAB_ID],
+            ...(chrome.runtime?.id ? { initiatorDomains: [chrome.runtime.id] } : {}),
           },
         },
       ],

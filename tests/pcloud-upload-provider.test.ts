@@ -121,6 +121,9 @@ test('uploadPCloudBackup creates folders, uploads, retries listfolder, and verif
     if (url.endsWith('/uploadfile')) {
       const form = init?.body as FormData;
       assert.equal(form.get('access_token'), 'token-secret');
+      // pCloud ignores fields after the file part and answers "Log in required".
+      assert.equal([...form.keys()][0], 'access_token');
+      assert.equal([...form.keys()].at(-1), 'file');
       assert.equal(form.get('folderid'), '300');
       assert.equal(form.get('nopartial'), '1');
       assert.equal(form.get('renameifexists'), '1');
@@ -429,7 +432,7 @@ test('downloadPCloudBackup downloads encrypted JSON and reports local SHA-256 wi
       assert.equal(headers?.['origin'], undefined);
       assert.equal(headers?.['referer'], undefined);
       assert.equal(init?.mode, 'cors');
-      assert.equal(init?.credentials, 'include');
+      assert.equal(init?.credentials, 'omit');
       assert.equal(init?.referrer, 'https://my.pcloud.com/');
       assert.equal(init?.referrerPolicy, 'origin');
       assert.equal(JSON.stringify(dnrCalls).includes('getfilelink'), true);
@@ -492,7 +495,7 @@ test('downloadPCloudBackup retries alternate pCloud hosts after direct-link refe
       assert.equal(headers?.['origin'], undefined);
       assert.equal(headers?.['referer'], undefined);
       assert.equal(init?.mode, 'cors');
-      assert.equal(init?.credentials, 'include');
+      assert.equal(init?.credentials, 'omit');
       assert.equal(init?.referrer, 'https://my.pcloud.com/');
       assert.equal(init?.referrerPolicy, 'origin');
       assert.equal(JSON.stringify(dnrCalls).includes('getfilelink'), true);
