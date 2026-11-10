@@ -448,7 +448,13 @@ test('zizmor is digest-pinned without a disallowed wrapper action and enforces t
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(workflow, /--persona auditor --format github/u);
   assert.match(workflow, /--config \.github\/zizmor\.yml \./u);
-  assert.match(config, /allow:\s*\n\s+- CHORES_DUMB_CLIENT_ID\s*\n\s+- CHORES_DUMB_PRIVATE_KEY/u);
+  assert.doesNotMatch(
+    config,
+    /CHORES_DUMB_|PCLOUD_CLIENT_ID/u,
+    'release credentials are environment secrets, not allow-listed repo secrets',
+  );
+  assert.match(readFileSync('.github/workflows/release.yml', 'utf8'), /\n {4}environment: release\n/u);
+  assert.equal(readFileSync('.github/workflows/version-cut.yml', 'utf8').match(/\n {4}environment: version-cut\n/gu)?.length, 2);
   assert.match(config, /['"]\*['"]: hash-pin/u);
   assert.doesNotMatch(config, /ref-pin/u);
   assert.equal(dependabot.match(/default-days: 7/gu)?.length, 2);

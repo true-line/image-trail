@@ -4,7 +4,7 @@ import { DEFAULT_URL_REVIEW_STATUS_LIMIT } from '../../core/settings.js';
 import type { UrlReviewStatusClearFilter, UrlReviewStatusRecord } from '../../core/types.js';
 import { urlReviewStatusRecordSchema } from '../../core/types.schema.js';
 import { openValidatedJsonEnvelope, sealJsonEnvelope } from '../crypto/envelope.js';
-import type { EncryptedEnvelope } from '../crypto/types.js';
+import type { EncryptedEnvelope, RecordEnvelopeMetadata } from '../crypto/types.js';
 import { encryptedEnvelopeSchema } from '../crypto/types.schema.js';
 import { requestToPromise, transactionDone } from '../idb-helpers.js';
 import { DataStore } from '../schema.js';
@@ -27,7 +27,7 @@ interface EncryptedUrlReviewStatusMetadataRecord {
   readonly key: string;
   readonly kind: 'urlReviewStatusEncrypted';
   readonly updatedAt: string;
-  readonly envelope: EncryptedEnvelope<{ readonly recordType: 'urlReviewStatus' }>;
+  readonly envelope: EncryptedEnvelope<RecordEnvelopeMetadata<'urlReviewStatus'>>;
 }
 
 type StoredUrlReviewStatusRecord = UrlReviewStatusMetadataRecord | EncryptedUrlReviewStatusMetadataRecord;
@@ -165,7 +165,7 @@ export class UrlReviewStatusRepository {
       payloadVersion: 1,
       key: encryption.key,
       keyReference: encryption.reference,
-      authenticatedMetadata: { recordType: 'urlReviewStatus' as const },
+      authenticatedMetadata: { recordType: 'urlReviewStatus' as const, recordId: key },
       now: record.updatedAt,
     });
     return { key, kind: 'urlReviewStatusEncrypted', updatedAt: record.updatedAt, envelope };
@@ -174,7 +174,7 @@ export class UrlReviewStatusRepository {
   private async openEncrypted(record: EncryptedUrlReviewStatusMetadataRecord): Promise<UrlReviewStatusRecord | null> {
     try {
       const encryption = await requireUrlMetadataEncryptionKey(this.privacy);
-      return await openValidatedJsonEnvelope(record.envelope, encryption.key, urlReviewStatusRecordSchema);
+      return await openValidatedJsonEnvelope(record.envelope, encryption.key, urlReviewStatusRecordSchema, record.key);
     } catch {
       return null;
     }

@@ -3,7 +3,7 @@ import { deriveEncryptionKey } from '../crypto/password-wrap.js';
 import { parseExportFile, fromBase64 } from '../import-export/encrypted-file-format.js';
 import * as v from 'valibot';
 import { openValidatedJsonEnvelope, sealJsonEnvelope } from '../crypto/envelope.js';
-import type { EncryptedEnvelope } from '../crypto/types.js';
+import type { EncryptedEnvelope, RecordEnvelopeMetadata } from '../crypto/types.js';
 import { encryptedEnvelopeSchema } from '../crypto/types.schema.js';
 import { findDownloadDuplicate } from '../../core/image/downloads.js';
 import { requestToPromise, transactionDone } from '../idb-helpers.js';
@@ -14,7 +14,7 @@ import { hydrateRecord } from './hydration.js';
 
 export interface EncryptedDownloadRecord {
   readonly uuid: string;
-  readonly envelope: EncryptedEnvelope<{ readonly recordType: 'download' }>;
+  readonly envelope: EncryptedEnvelope<RecordEnvelopeMetadata<'download'>>;
 }
 
 const encryptedDownloadRecordSchema = v.object({
@@ -86,7 +86,7 @@ export class DownloadsRepository {
       payloadVersion: 1,
       key,
       keyReference,
-      authenticatedMetadata: { recordType: 'download' as const },
+      authenticatedMetadata: { recordType: 'download' as const, recordId: uuid },
       now,
     });
     const record = { uuid, envelope };
@@ -95,7 +95,7 @@ export class DownloadsRepository {
   }
 
   async openRecord(record: EncryptedDownloadRecord, key: CryptoKey): Promise<DurableDownloadPayloadV1> {
-    return openValidatedJsonEnvelope(record.envelope, key, durableDownloadPayloadSchema);
+    return openValidatedJsonEnvelope(record.envelope, key, durableDownloadPayloadSchema, record.uuid);
   }
 
   async findDuplicate(

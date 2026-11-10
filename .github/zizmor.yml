@@ -1,21 +1,13 @@
 rules:
   secrets-outside-env:
     config:
-      # These dedicated automation credentials are consumed only by the
-      # version branch/PR/tag jobs; their triggers and permissions constrain
-      # their use.
       allow:
-        - CHORES_DUMB_CLIENT_ID
-        - CHORES_DUMB_PRIVATE_KEY
         # Read-only credential for the cross-repository checkouts of the pinned
         # sibling repositories (overlook, agentic-code-analysis). The default
         # GITHUB_TOKEN is scoped to this repository, so a checkout of a private
         # sibling 404s; an empty secret falls back to github.token, so the
         # workflow behaves identically until the secret exists.
         - CROSS_REPO_TOKEN
-        # Public OAuth configuration is injected only into the hardened release
-        # build; the repository secret keeps it out of source control.
-        - PCLOUD_CLIENT_ID
         # Consumed only by the advisory aca judge (contents: read, pull_request
         # from same-repo branches; fork PRs receive no secrets). Prepaid Qwen
         # token-plan key — spend is capped by the plan, service pauses at
