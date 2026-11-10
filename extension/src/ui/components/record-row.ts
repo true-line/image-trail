@@ -1,3 +1,5 @@
+import { inlineImageThumbnail } from '../../core/display-records.js';
+
 export type RecordRowState = 'default' | 'selected' | 'locked-encrypted' | 'key-unavailable';
 
 export interface RecordRowOptions {
@@ -74,10 +76,13 @@ function createInteractionTarget(root: HTMLLIElement, target: 'root' | 'button')
 }
 
 function createRecordVisual(options: RecordRowOptions): HTMLElement {
-  if (options.thumbnail && !options.privacyMasked && options.state !== 'locked-encrypted' && options.state !== 'key-unavailable') {
+  // Records saved before restore dropped remote thumbnails may still carry one: check here too,
+  // so no row in the Queue, Recents, or Recall requests a thumbnail from a remote address.
+  const thumbnail = inlineImageThumbnail(options.thumbnail);
+  if (thumbnail && !options.privacyMasked && options.state !== 'locked-encrypted' && options.state !== 'key-unavailable') {
     const image = document.createElement('img');
     image.className = thumbnailClasses(options.layout, false, false);
-    image.src = options.thumbnail;
+    image.src = thumbnail;
     image.alt = options.thumbnailAlt ?? '';
     image.loading = 'lazy';
     return image;

@@ -278,3 +278,12 @@ function dataMediaMimeType(url: string): string | null {
 function imageExtensionFromDataImageUrl(url: string): string | null {
   return imageExtensionFromImageType(dataMediaMimeType(url));
 }
+
+/**
+ * Thumbnails the extension generates are always inline `data:image/` URLs. Anything else comes
+ * from a file the user imported, and rendering it would make an extension page request a
+ * remote URL chosen by whoever wrote that file.
+ */
+export function inlineImageThumbnail(thumbnail: string | undefined): string | undefined {
+  return thumbnail !== undefined && /^data:image\//iu.test(thumbnail) ? thumbnail : undefined;
+}

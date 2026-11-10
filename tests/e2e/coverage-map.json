@@ -1784,6 +1784,18 @@
         }
       ],
       "documentation": "docs/testing-strategy.md"
+    },
+    {
+      "id": "restore-inline-thumbnails-only",
+      "acceptance": "Restored records render only inline image thumbnails",
+      "coverage": [
+        {
+          "type": "unit-dom",
+          "paths": ["tests/restore-import-preview.test.ts"],
+          "notes": "Covers history and bookmark payload mapping: an inline data:image thumbnail is kept and any other thumbnail URL is dropped so the placeholder renders."
+        }
+      ],
+      "documentation": "docs/acceptance-tests/restore-inline-thumbnails.md"
     }
   ]
 }

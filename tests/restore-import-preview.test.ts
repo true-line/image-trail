@@ -281,3 +281,13 @@ test('bookmarkPayloadToDisplayRecord falls back to the stored original capture t
   assert.equal(favorite.source, 'favorites');
   assert.equal(favorite.captureStatus, undefined);
 });
+
+test('imported payloads keep inline thumbnails and drop any other thumbnail URL', () => {
+  const inline = 'data:image/png;base64,AAAA';
+  const base = { url: 'https://example.test/a.jpg', capturedAt: '2026-06-20T00:00:00.000Z', captureStatus: 'remote-only' as const };
+  assert.equal(historyPayloadToDisplayRecord('h1', { ...base, thumbnail: inline }).thumbnail, inline);
+  assert.equal(historyPayloadToDisplayRecord('h2', { ...base, thumbnail: 'https://tracker.test/pixel.gif' }).thumbnail, undefined);
+  const bookmark = { url: base.url, bookmarkedAt: base.capturedAt };
+  assert.equal(bookmarkPayloadToDisplayRecord('b1', { ...bookmark, thumbnail: inline }).thumbnail, inline);
+  assert.equal(bookmarkPayloadToDisplayRecord('b2', { ...bookmark, thumbnail: 'data:text/html,<p>x</p>' }).thumbnail, undefined);
+});
