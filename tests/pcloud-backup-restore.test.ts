@@ -117,7 +117,7 @@ function createHarness(files: ReadonlyMap<number, { readonly fileName: string; r
     importBlobKeyBackup: async () => ({ ok: true as const, keyReference: 'blob:key-1', message: 'Imported.' }),
     importOriginalBlobRecords: async (records: readonly { readonly id: string }[]) => {
       importedRecords.push(records.map((record) => record.id));
-      return { ok: true as const, importedCount: records.length, message: 'Imported.' };
+      return { ok: true as const, importedCount: records.length, skippedCount: 0, message: 'Imported.' };
     },
   } as unknown as CaptureStore;
   const deps: PCloudBackupRestoreDeps = {

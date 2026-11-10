@@ -27,8 +27,9 @@ export async function ensureDurableBookmarkKey(repository: KeysRepository): Prom
     wrapping: { mode: 'indexeddb', algorithm: 'none' },
     extractable: false,
   };
-  await repository.put(record);
-  return { reference, key: record.key };
+  // Callers run independently on first use; whichever key lands first is the one every caller uses.
+  const stored = await repository.putUnlessKindExists(record, isDurableBookmarkKeyRecord);
+  return stored === record ? { reference, key: record.key } : { reference: stored, key: stored.key };
 }
 
 function isDurableBookmarkKeyRecord(record: StoredKeyRecord): record is DurableBookmarkKeyRecord {

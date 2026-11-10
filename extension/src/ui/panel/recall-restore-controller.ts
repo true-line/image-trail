@@ -31,6 +31,7 @@ import {
   type UrlReviewStatusImportResult,
 } from './restore-import-preview.js';
 import { PCloudBackupRestoreCoordinator, type ChunkedCloudRestoreContext } from './pcloud-backup-restore.js';
+import { restoreFullBackupOriginalFiles, type OriginalRestoreOutcome } from './full-backup-original-restore.js';
 
 /**
  * Tagged union of a decrypted, deduped import awaiting user confirmation. Owned by
@@ -286,7 +287,7 @@ export class RecallRestoreController {
             result.skipped.length,
             result.plaintext,
             result.fullBackup
-              ? fullBackupRestoreDetail(fullBackupOriginalRestore.importedOriginalCount)
+              ? fullBackupRestoreDetail(fullBackupOriginalRestore.importedOriginalCount, fullBackupOriginalRestore.skippedOriginalCount)
               : 'encrypted into bookmark storage',
           ) +
           privatePinsNotRestoredMessage(privateCounts) +
@@ -323,25 +324,12 @@ export class RecallRestoreController {
     result: BookmarkImportResult,
     password: string,
     chunkedCloudRestore?: ChunkedCloudRestoreContext,
-  ): Promise<{ readonly ok: true; readonly importedOriginalCount: number } | { readonly ok: false; readonly message: string }> {
-    if (!result.fullBackup) return { ok: true, importedOriginalCount: 0 };
+  ): Promise<OriginalRestoreOutcome> {
+    if (!result.fullBackup) return { ok: true, importedOriginalCount: 0, skippedOriginalCount: 0 };
     if (chunkedCloudRestore && chunkedCloudRestore.manifest.originalCount > 0) {
       return this.pcloudRestore.restoreOriginals(chunkedCloudRestore, password);
     }
-    if (result.externalOriginalCount === 0) return { ok: true, importedOriginalCount: 0 };
-    const captureStore = this.deps.captureStore();
-    if (!captureStore) {
-      return { ok: false, message: 'Encrypted original storage is unavailable; no bookmarks were imported.' };
-    }
-    for (const backup of result.blobKeyBackups) {
-      const imported = await captureStore.importBlobKeyBackup(backup.fileContent, password);
-      if (!imported.ok) return { ok: false, message: imported.message };
-    }
-    const blobImport = await captureStore.importOriginalBlobRecords(result.originalBlobs);
-    if (!blobImport.ok) return { ok: false, message: blobImport.message };
-    await this.deps.refreshBlobKeyStatus();
-    await this.deps.refreshStorageUsage();
-    return { ok: true, importedOriginalCount: blobImport.importedCount };
+    return restoreFullBackupOriginalFiles(this.deps, result, password);
   }
 
   previewUrlReviewStatusImport(fileContent: string, fileName?: string): void {

@@ -114,8 +114,12 @@ export function restoreImportCompleteMessage(
   return [imported, skipped, duplicates, plaintextMessage].filter(Boolean).join(' ');
 }
 
-export function fullBackupRestoreDetail(importedOriginalCount: number): string {
-  return `encrypted into bookmark storage with ${importedOriginalCount} encrypted original${importedOriginalCount === 1 ? '' : 's'} restored`;
+export function fullBackupRestoreDetail(importedOriginalCount: number, skippedOriginalCount = 0): string {
+  const kept =
+    skippedOriginalCount > 0
+      ? `; ${skippedOriginalCount} original${skippedOriginalCount === 1 ? ' was' : 's were'} already stored and kept unchanged`
+      : '';
+  return `encrypted into bookmark storage with ${importedOriginalCount} encrypted original${importedOriginalCount === 1 ? '' : 's'} restored${kept}`;
 }
 
 function restoreSha256FromUnknown(value: unknown): string | undefined {

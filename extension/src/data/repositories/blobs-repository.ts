@@ -20,6 +20,21 @@ export class BlobsRepository {
     return record;
   }
 
+  /** Stores `record` only when no blob has its id, checking and writing in one transaction. Returns whether it was stored. */
+  async putIfAbsent(record: StoredBlobRecord): Promise<boolean> {
+    const transaction = this.db.transaction([DataStore.Blobs, DataStore.OriginalBlobIndex], 'readwrite');
+    const done = transactionDone(transaction);
+    const blobs = transaction.objectStore(DataStore.Blobs);
+    const absent = (await requestToPromise<IDBValidKey | undefined>(blobs.getKey(record.id))) === undefined;
+    if (absent) {
+      blobs.put(record);
+      const parsed = v.safeParse(storedBlobRecordSchema, record);
+      if (parsed.success && parsed.output.kind === 'original') transaction.objectStore(DataStore.OriginalBlobIndex).put({ id: record.id });
+    }
+    await done;
+    return absent;
+  }
+
   async get(id: string): Promise<StoredBlobRecord | undefined> {
     const transaction = this.db.transaction(DataStore.Blobs, 'readonly');
     const result = await requestToPromise<unknown>(transaction.objectStore(DataStore.Blobs).get(id));

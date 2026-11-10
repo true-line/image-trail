@@ -55,16 +55,18 @@ export function createOriginalBlobMessageRegistry({
     if (!db) return { ok: false, reason: 'db-unavailable', message: 'Database unavailable.' };
     const blobs = new BlobsRepository(db);
     let importedCount = 0;
+    let skippedCount = 0;
     try {
       for (const record of message.payload.records) {
         if (record.kind !== 'original') continue;
-        await blobs.put(storedBlobRecordFromPortable(record));
-        importedCount += 1;
+        // An id that is already stored keeps its bytes: a stale or foreign backup never replaces them.
+        if (await blobs.putIfAbsent(storedBlobRecordFromPortable(record))) importedCount += 1;
+        else skippedCount += 1;
       }
     } catch {
       return { ok: false, reason: 'invalid-original', message: 'Encrypted original backup payload was invalid.' };
     }
-    return { ok: true, importedCount };
+    return { ok: true, importedCount, skippedCount };
   }
 
   return {

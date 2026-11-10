@@ -31,6 +31,17 @@ Verify that encrypted captured originals have a portable recovery path before en
 - The captured original created before export can be retrieved after restore.
 - Importing with the wrong backup password fails closed and does not write a key.
 - Re-importing an existing key reference is idempotent or reports that the key is already imported without duplicating it.
+- Creating the encrypted originals key stores the key before the session unlocks. If the key cannot be stored, setup fails and storage stays locked.
+- Setup refuses to create a second key while one exists, and the panel offers unlock instead.
+- Restoring a full backup never replaces an original already stored under the same id; the summary counts those originals as kept unchanged.
+- Full-backup originals are restored in bounded batches. If a batch fails, the error says how many originals were restored first, and no bookmarks are imported.
+- Orphan cleanup deletes nothing while any bookmark record cannot be read, because that record could link any original.
+
+## Manual check: restore keeps existing originals
+
+1. Capture an original into a pin, then export a full backup.
+2. Without clearing the profile, restore the same full backup and confirm the preview.
+3. Confirm the summary reports the original as already stored and kept unchanged, and the pin still previews its original.
 
 ## Manual check: exports stay out of the host page
 
