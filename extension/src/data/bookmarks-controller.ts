@@ -21,7 +21,7 @@ import {
 } from './bookmark-record-mappers.js';
 import type { ActiveBlobKey } from './crypto/blob-keyring.js';
 import { openImageTrailDb } from './db.js';
-import { ensureDurableBookmarkKey, type DurableBookmarkKeyContext } from './durable-bookmark-key.js';
+import { ensureDurableBookmarkKeyOrClose, type DurableBookmarkKeyContext } from './durable-bookmark-key.js';
 import { DEFAULT_LOCAL_SETTINGS } from './local-settings.js';
 import { DEFAULT_QUEUE_DISPLAY_ORDER, sortQueueRecords, type QueueDisplayOrder } from '../core/display-order.js';
 import { BlobsRepository } from './repositories/blobs-repository.js';
@@ -459,7 +459,7 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
   private async createContext(): Promise<BookmarkContext | null> {
     const result = await openImageTrailDb();
     if (!result.db) return null;
-    const bookmarkKey = await ensureDurableBookmarkKey(new KeysRepository(result.db));
+    const bookmarkKey = await ensureDurableBookmarkKeyOrClose(result.db, new KeysRepository(result.db));
     return {
       db: result.db,
       repository: new BookmarksRepository(result.db),

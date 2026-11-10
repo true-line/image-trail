@@ -5,6 +5,8 @@ import { createBookmarkMessageRegistry } from '../extension/src/background/handl
 import { MessageType, createSaveBookmarkMessage } from '../extension/src/background/messages.js';
 import { createDisplayRecord } from '../extension/src/core/display-records.js';
 import { IndexedDbBookmarkStore } from '../extension/src/data/bookmarks-controller.js';
+import { ensureDurableBookmarkKeyOrClose } from '../extension/src/data/durable-bookmark-key.js';
+import type { KeysRepository } from '../extension/src/data/repositories/keys-repository.js';
 import { deleteImageTrailDb } from './indexeddb-test-helpers.js';
 
 const record = createDisplayRecord({
@@ -81,4 +83,13 @@ test('the save handler replies with a failure and publishes no library change wh
   await assert.rejects(async () => entry.handle(message), /unavailable/);
   assert.deepEqual(entry.fallback(message).payload, { ok: false, message: 'Bookmark save failed.' });
   assert.deepEqual(notifications, []);
+});
+
+test('a database whose bookmark key cannot be ensured is closed rather than leaked', async () => {
+  let closed = 0;
+  const db = { close: () => (closed += 1) } as unknown as IDBDatabase;
+  const keys = { listByKind: () => Promise.reject(new Error('key store failed')) } as unknown as KeysRepository;
+
+  await assert.rejects(ensureDurableBookmarkKeyOrClose(db, keys), /key store failed/u);
+  assert.equal(closed, 1);
 });
