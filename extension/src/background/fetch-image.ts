@@ -1,3 +1,4 @@
+import { redirectEntersPrivateNetwork } from './message-sender.js';
 import type { CaptureFailureReason } from '../core/image/capture-result.js';
 import { DEFAULT_MAX_ORIGINAL_BYTES } from '../core/image/capture-result.js';
 import { alignFilenameWithVerifiedExtension, sanitizeFilename } from '../core/image/downloads.js';
@@ -73,6 +74,9 @@ export async function fetchImageBytes(
     return { ok: false, reason: 'network-error', message: 'Network request failed.' };
   }
 
+  if (response.url && redirectEntersPrivateNetwork(url, response.url)) {
+    return { ok: false, reason: 'fetch-forbidden', message: 'Redirect into a private network was blocked.' };
+  }
   const statusFailure = responseStatusFailure(response);
   if (statusFailure) return statusFailure;
 

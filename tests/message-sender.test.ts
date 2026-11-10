@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isExtensionPageSender, isOwnExtensionSender, withSenderCheckedReferrer } from '../extension/src/background/message-sender.js';
+import {
+  isExtensionPageSender,
+  isOwnExtensionSender,
+  isPrivateNetworkHost,
+  publicPageTargetsPrivateNetwork,
+  redirectEntersPrivateNetwork,
+  withSenderCheckedReferrer,
+} from '../extension/src/background/message-sender.js';
 
 const ID = 'abcdefghijklmnopabcdefghijklmnop';
 const contentScript = { id: ID, url: 'https://site.test/gallery', origin: 'https://site.test', tab: { url: 'https://site.test/gallery' } };
@@ -43,4 +50,61 @@ test('extension pages and payloads without a referrer pass through unchanged', (
   assert.equal(withSenderCheckedReferrer(without, contentScript, ID), without);
   const none: { type: string; payload?: unknown } = { type: 't' };
   assert.equal(withSenderCheckedReferrer(none, contentScript, ID), none);
+});
+
+test('private-network hosts are recognised', () => {
+  for (const host of [
+    'localhost',
+    'nas.local',
+    '127.0.0.1',
+    '10.1.2.3',
+    '192.168.1.10',
+    '172.16.0.1',
+    '172.31.255.1',
+    '169.254.169.254',
+    '[::1]',
+    '[fd00::1]',
+    '[fe80::1]',
+    '[::ffff:10.0.0.1]',
+  ]) {
+    assert.equal(isPrivateNetworkHost(host), true, host);
+  }
+  for (const host of ['example.com', '8.8.8.8', '172.32.0.1', '11.0.0.1', '[2606:4700::1111]', 'local.example.com']) {
+    assert.equal(isPrivateNetworkHost(host), false, host);
+  }
+});
+
+test('private-network detection survives URL canonicalisation of IPv4-mapped IPv6', () => {
+  for (const url of [
+    'http://[::ffff:10.0.0.1]/',
+    'http://[::ffff:127.0.0.1]/',
+    'http://[::ffff:c0a8:10a]/',
+    'http://[0:0:0:0:0:ffff:a9fe:a9fe]/',
+  ]) {
+    assert.equal(isPrivateNetworkHost(new URL(url).hostname), true, url);
+  }
+  assert.equal(isPrivateNetworkHost(new URL('http://[::ffff:8.8.8.8]/').hostname), false);
+});
+
+test('a redirect from a public address into a private network is detected', () => {
+  assert.equal(redirectEntersPrivateNetwork('https://cdn.test/a.jpg', 'http://192.168.1.10/a.jpg'), true);
+  assert.equal(redirectEntersPrivateNetwork('https://cdn.test/a.jpg', 'http://[::ffff:10.0.0.1]/a.jpg'), true);
+  assert.equal(redirectEntersPrivateNetwork('https://cdn.test/a.jpg', 'https://img.cdn.test/a.jpg'), false);
+  assert.equal(redirectEntersPrivateNetwork('http://192.168.1.10/a', 'http://192.168.1.11/a'), false);
+});
+
+test('a public page cannot request a private-network address', () => {
+  const request = { type: 't', payload: { url: 'http://192.168.1.10/camera.jpg' } };
+  assert.equal(publicPageTargetsPrivateNetwork(request, contentScript, ID), true);
+  assert.equal(publicPageTargetsPrivateNetwork(request, { id: ID }, ID), true, 'unknown sender location is treated as public');
+});
+
+test('private pages, extension pages, and public targets are unaffected', () => {
+  const privateTarget = { type: 't', payload: { url: 'http://192.168.1.10/camera.jpg' } };
+  const lanPage = { id: ID, url: 'http://192.168.1.10/index.html' };
+  assert.equal(publicPageTargetsPrivateNetwork(privateTarget, lanPage, ID), false);
+  assert.equal(publicPageTargetsPrivateNetwork(privateTarget, extensionPage, ID), false);
+  assert.equal(publicPageTargetsPrivateNetwork({ payload: { url: 'https://cdn.test/a.jpg' } }, contentScript, ID), false);
+  assert.equal(publicPageTargetsPrivateNetwork({ payload: { url: 'data:image/png;base64,AAAA' } }, contentScript, ID), false);
+  assert.equal(publicPageTargetsPrivateNetwork({ payload: {} }, contentScript, ID), false);
 });
