@@ -63,6 +63,16 @@ export async function openJsonEnvelope<TPayload>(envelope: EncryptedEnvelope, ke
 }
 
 /**
+ * Rejects an envelope that was sealed for a different row. The record id is part of the
+ * authenticated metadata, so it cannot be changed or removed without failing decryption.
+ * Envelopes sealed before the binding existed carry no id and are accepted as they are.
+ */
+export function assertEnvelopeBoundTo(envelope: EncryptedEnvelope, recordId: string): void {
+  const bound = envelope.authenticatedMetadata['recordId'];
+  if (bound !== undefined && bound !== recordId) throw new Error('Encrypted envelope belongs to a different record.');
+}
+
+/**
  * Decrypts an envelope and validates the decrypted JSON payload against `schema`,
  * throwing when it does not conform (callers already treat a throw here as an
  * unreadable/quarantined row). Returns the original parsed payload unchanged so
@@ -72,7 +82,9 @@ export async function openValidatedJsonEnvelope<TPayload>(
   envelope: EncryptedEnvelope,
   key: CryptoKey,
   schema: v.GenericSchema<unknown, TPayload>,
+  recordId?: string,
 ): Promise<TPayload> {
+  if (recordId !== undefined) assertEnvelopeBoundTo(envelope, recordId);
   const payload = await openJsonEnvelope<unknown>(envelope, key);
   if (!v.is(schema, payload)) {
     throw new Error('Decrypted envelope payload failed schema validation.');

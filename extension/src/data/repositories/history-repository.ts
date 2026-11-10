@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 import { openValidatedJsonEnvelope, sealJsonEnvelope } from '../crypto/envelope.js';
-import type { EncryptedEnvelope } from '../crypto/types.js';
+import type { EncryptedEnvelope, RecordEnvelopeMetadata } from '../crypto/types.js';
 import { encryptedEnvelopeSchema } from '../crypto/types.schema.js';
 import { requestToPromise, transactionDone } from '../idb-helpers.js';
 import { DataStore } from '../schema.js';
@@ -10,7 +10,7 @@ import { hydrateRecord, hydrateRecords } from './hydration.js';
 
 export interface EncryptedHistoryRecord {
   readonly uuid: string;
-  readonly envelope: EncryptedEnvelope<{ readonly recordType: 'history' }>;
+  readonly envelope: EncryptedEnvelope<RecordEnvelopeMetadata<'history'>>;
 }
 
 const encryptedHistoryRecordSchema = v.object({
@@ -52,7 +52,7 @@ export class HistoryRepository {
       payloadVersion: 1,
       key,
       keyReference,
-      authenticatedMetadata: { recordType: 'history' as const },
+      authenticatedMetadata: { recordType: 'history' as const, recordId: uuid },
     });
     const record = { uuid, envelope };
     await this.putEncrypted(record);
@@ -61,6 +61,6 @@ export class HistoryRepository {
 
   async open(uuid: string, key: CryptoKey): Promise<DurableHistoryPayloadV1 | null> {
     const record = await this.getEncrypted(uuid);
-    return record ? openValidatedJsonEnvelope(record.envelope, key, durableHistoryPayloadSchema) : null;
+    return record ? openValidatedJsonEnvelope(record.envelope, key, durableHistoryPayloadSchema, record.uuid) : null;
   }
 }

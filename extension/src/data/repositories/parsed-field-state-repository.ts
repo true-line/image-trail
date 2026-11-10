@@ -3,7 +3,7 @@ import { type SearchableMetadataMode, type SearchableMetadataPolicy } from '../.
 import type { ParsedFieldStateRecord } from '../../core/types.js';
 import { parsedFieldStateRecordSchema } from '../../core/types.schema.js';
 import { openValidatedJsonEnvelope, sealJsonEnvelope } from '../crypto/envelope.js';
-import type { EncryptedEnvelope } from '../crypto/types.js';
+import type { EncryptedEnvelope, RecordEnvelopeMetadata } from '../crypto/types.js';
 import { encryptedEnvelopeSchema } from '../crypto/types.schema.js';
 import { requestToPromise, transactionDone } from '../idb-helpers.js';
 import { DataStore } from '../schema.js';
@@ -26,7 +26,7 @@ interface EncryptedParsedFieldStateMetadataRecord {
   readonly key: string;
   readonly kind: 'parsedFieldStateEncrypted';
   readonly updatedAt: string;
-  readonly envelope: EncryptedEnvelope<{ readonly recordType: 'parsedFieldState' }>;
+  readonly envelope: EncryptedEnvelope<RecordEnvelopeMetadata<'parsedFieldState'>>;
 }
 
 const parsedFieldStateMetadataRecordSchema = v.object({
@@ -137,7 +137,7 @@ export class ParsedFieldStateRepository {
       payloadVersion: 1,
       key: encryption.key,
       keyReference: encryption.reference,
-      authenticatedMetadata: { recordType: 'parsedFieldState' as const },
+      authenticatedMetadata: { recordType: 'parsedFieldState' as const, recordId: key },
       now: record.updatedAt,
     });
     return { key, kind: 'parsedFieldStateEncrypted', updatedAt: record.updatedAt, envelope };
@@ -146,7 +146,7 @@ export class ParsedFieldStateRepository {
   private async openEncrypted(record: EncryptedParsedFieldStateMetadataRecord): Promise<ParsedFieldStateRecord | null> {
     try {
       const encryption = await requireUrlMetadataEncryptionKey(this.privacy);
-      return await openValidatedJsonEnvelope(record.envelope, encryption.key, parsedFieldStateRecordSchema);
+      return await openValidatedJsonEnvelope(record.envelope, encryption.key, parsedFieldStateRecordSchema, record.key);
     } catch {
       return null;
     }
