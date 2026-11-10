@@ -62,7 +62,7 @@ export function createSearchableMetadataSettingsView(
   const meta = document.createElement('p');
   meta.className = 'image-trail-panel__settings-empty';
   meta.textContent =
-    'Controls which optional fields may stay in plaintext searchable metadata on disk. Encrypted keeps them out of plaintext (URLs are hashed). This is separate from Privacy mode, which only masks the display.';
+    'Controls which optional fields may stay in plaintext searchable metadata on disk. Encrypted seals them with a key kept in this browser profile, so they are not stored as readable text, but they are not protected by your encryption password: someone with access to this profile can recover them, and the URL lookup hash can confirm an address they already know. Only private pins and stored originals are password-protected. This is separate from Privacy mode, which only masks the display.';
 
   const urlSelect = createMetadataModeSelect(policy.urlDerived);
   const albumSelect = createMetadataModeSelect(policy.albumName);
