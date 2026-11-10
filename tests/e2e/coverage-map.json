@@ -1120,6 +1120,23 @@
       "documentation": "docs/acceptance-tests/oversized-original-is-bounded.md"
     },
     {
+      "id": "panel-password-entry-is-isolated",
+      "acceptance": "Panel password entry is isolated",
+      "repoPath": "docs/acceptance-tests/panel-password-entry-is-isolated.md",
+      "coverage": [
+        {
+          "type": "unit-dom",
+          "paths": ["tests/dom/password-frame.test.ts"]
+        },
+        {
+          "type": "playwright-e2e",
+          "path": "tests/e2e/import-export-settings.spec.ts",
+          "notes": "Every in-page password field is filled through the extension-origin frame, covering key creation, unlock, key backup export and import, cloud backup, and the workspace lock screen. Host-page keystroke observation is a manual check in the acceptance document."
+        }
+      ],
+      "documentation": "docs/acceptance-tests/panel-password-entry-is-isolated.md"
+    },
+    {
       "id": "key-backup-restore",
       "acceptance": "Key backup restore",
       "repoPath": "docs/acceptance-tests/key-backup-restore.md",

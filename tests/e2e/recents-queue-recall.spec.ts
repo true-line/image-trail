@@ -18,6 +18,7 @@ import {
   setLoadFailureFeedback,
   test,
   togglePanelFromExtensionAction,
+  fillPanelPassword,
 } from './fixtures.js';
 import { pinCurrentImage } from './current-image-actions.js';
 
@@ -39,7 +40,7 @@ async function setupEncryptedOriginals(page: Page): Promise<void> {
     await closeSettings(page);
     return;
   }
-  await page.getByLabel('New encrypted originals password').fill(encryptedOriginalsPassword);
+  await fillPanelPassword(page, 'New encrypted originals password', encryptedOriginalsPassword);
   await page.getByRole('button', { name: 'Create first key' }).click();
   await expectPanelStatusMessage(page, /Encrypted blob storage unlocked with blob:[a-f0-9-]+\./u);
   await closeSettings(page);

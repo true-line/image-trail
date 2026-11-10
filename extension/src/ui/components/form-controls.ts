@@ -1,3 +1,5 @@
+import { attachPasswordFrame, passwordFrameRuntime } from './password-frame.js';
+
 let formControlId = 0;
 
 interface PasswordControlOptions {
@@ -82,6 +84,14 @@ export function createPasswordField(options: PasswordControlOptions): {
   input.disabled = options.disabled === true;
   input.setAttribute('aria-describedby', descriptionId);
 
+  const runtime = passwordFrameRuntime();
+  if (runtime) {
+    const frame = attachPasswordFrame(runtime, input, options);
+    frame.setAttribute('aria-describedby', descriptionId);
+    label.addEventListener('click', () => frame.focus());
+    field.append(label, frame, input, createFieldDescription(descriptionId, options.description));
+    return { field, input };
+  }
   field.append(label, input, createFieldDescription(descriptionId, options.description));
   return { field, input };
 }

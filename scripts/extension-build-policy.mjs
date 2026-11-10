@@ -72,6 +72,11 @@ export const EXTENSION_ENTRY_POINTS = {
     outfile: 'extension/dist/src/interop-pairing/import.js',
     format: 'esm',
   },
+  passwordField: {
+    entryPoint: 'extension/src/password-field/field.ts',
+    outfile: 'extension/dist/src/password-field/field.js',
+    format: 'esm',
+  },
   preview: {
     entryPoint: 'extension/src/preview/preview.js',
     outfile: 'extension/dist/src/preview/preview.js',

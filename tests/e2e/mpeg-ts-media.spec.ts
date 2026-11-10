@@ -19,6 +19,7 @@ import {
   resetExtensionLibrary,
   test,
   togglePanelFromExtensionAction,
+  fillPanelPassword,
 } from './fixtures.js';
 
 const supportedHash = 'da3d70e6479b8ce82d73ffa6b31b930a1555cb1c6e4d523854076ed2fab092d9';
@@ -170,7 +171,7 @@ async function setupEncryptedOriginals(page: Page): Promise<void> {
     await closeSettings(page);
     return;
   }
-  await page.getByLabel('New encrypted originals password').fill('mpeg-ts-original-password');
+  await fillPanelPassword(page, 'New encrypted originals password', 'mpeg-ts-original-password');
   await page.getByRole('button', { name: 'Create first key' }).click();
   await expect(page.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');
   await closeSettings(page);

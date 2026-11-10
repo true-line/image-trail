@@ -1,3 +1,4 @@
+import { attachPasswordFrame, passwordFrameRuntime, PASSWORD_SUBMIT_EVENT } from './password-frame.js';
 type UnlockAction = { readonly name: 'blob-key/unlock'; readonly password: string };
 
 export interface WorkspaceLockViewState {
@@ -39,6 +40,11 @@ export function createWorkspaceLockView(state: WorkspaceLockViewState, dispatch:
   password.autocomplete = 'current-password';
   password.disabled = state.unlocking;
   password.dataset['secureWorkspacePassword'] = 'true';
+  const runtime = passwordFrameRuntime();
+  if (runtime) {
+    label.append(attachPasswordFrame(runtime, password, { label: 'Password', placeholder: '', autocomplete: 'current-password' }));
+    password.addEventListener(PASSWORD_SUBMIT_EVENT, () => form.requestSubmit());
+  }
   label.append(password);
 
   const unlock = document.createElement('button');
@@ -48,8 +54,8 @@ export function createWorkspaceLockView(state: WorkspaceLockViewState, dispatch:
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (!form.reportValidity() || state.unlocking) return;
     const value = password.value;
+    if (value === '' || !form.reportValidity() || state.unlocking) return;
     password.value = '';
     dispatch({ name: 'blob-key/unlock', password: value });
   });

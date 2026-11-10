@@ -1,4 +1,4 @@
-import { test as base, chromium, expect, type BrowserContext, type Page, type Worker } from '@playwright/test';
+import { test as base, chromium, expect, type BrowserContext, type Locator, type Page, type Worker } from '@playwright/test';
 import { rm, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -388,4 +388,18 @@ export async function imageNavigationSnapshot(page: Page, imageSelector: string,
       lockBox: image.getAttribute('data-image-trail-lock-box'),
     };
   }, sourceSelector);
+}
+
+/**
+ * Password fields in the in-page panel are typed into an extension-origin frame titled with the
+ * field's label, so the visited page cannot observe keystrokes.
+ */
+export function panelPasswordField(scope: Page | Locator, label: string): Locator {
+  return scope.frameLocator(`iframe[title="${label}"]`).locator('input');
+}
+
+/** Fills a panel password field and waits until the panel has received the value from the frame. */
+export async function fillPanelPassword(scope: Page | Locator, label: string, value: string): Promise<void> {
+  await panelPasswordField(scope, label).fill(value);
+  await expect(scope.locator(`iframe[title="${label}"] + input`)).toHaveValue(value);
 }

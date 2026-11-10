@@ -19,6 +19,8 @@ import {
   openSettingsGroup,
   test,
   togglePanelFromExtensionAction,
+  fillPanelPassword,
+  panelPasswordField,
 } from './fixtures.js';
 import { pinCurrentImage } from './current-image-actions.js';
 
@@ -162,12 +164,12 @@ async function setupEncryptedOriginals(page: Page): Promise<void> {
     await section.getByRole('button', { name: 'Confirm clear key' }).click();
     await expectPanelStatusMessage(page, /Encrypted blob key cleared\. Import a key backup to recover encrypted originals\./u);
   }
-  const newPassword = section.getByLabel('New encrypted originals password');
+  const newPassword = panelPasswordField(section, 'New encrypted originals password');
   if ((await newPassword.count()) > 0 && (await newPassword.isVisible())) {
-    await newPassword.fill(encryptionPassword);
+    await fillPanelPassword(section, 'New encrypted originals password', encryptionPassword);
     await section.getByRole('button', { name: 'Create first key' }).click();
   } else {
-    await section.getByLabel('Encrypted originals password').fill(encryptionPassword);
+    await fillPanelPassword(section, 'Encrypted originals password', encryptionPassword);
     await section.getByRole('button', { name: 'Unlock' }).click();
   }
   await expect(section.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');
@@ -179,7 +181,7 @@ async function exportKeyBackup(page: Page): Promise<{ readonly download: Downloa
   const keyBackup = page
     .getByRole('heading', { name: 'Key backup' })
     .locator('xpath=ancestor::div[contains(@class, "image-trail-panel__subsection")][1]');
-  await keyBackup.getByLabel('Password').fill(backupPassword);
+  await fillPanelPassword(keyBackup, 'Password', backupPassword);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     keyBackup.getByRole('button', { name: 'Export key backup' }).click(),
@@ -207,14 +209,14 @@ async function importKeyBackup(page: Page, fileContent: string, password: string
   await keyBackup
     .locator('input[type="file"][accept=".json,application/json"]')
     .setInputFiles({ name: 'image-trail-key-backup.json', mimeType: 'application/json', buffer: Buffer.from(fileContent) });
-  await keyBackup.getByLabel('Password').fill(password);
+  await fillPanelPassword(keyBackup, 'Password', password);
   await keyBackup.getByRole('button', { name: 'Import key backup' }).click();
 }
 
 async function unlockWorkspaceAfterKeyImport(page: Page): Promise<void> {
   const lock = page.locator('[data-secure-workspace-lock="true"]');
   await expect(lock).toBeVisible();
-  await lock.getByLabel('Password').fill(encryptionPassword);
+  await fillPanelPassword(lock, 'Password', encryptionPassword);
   await lock.getByRole('button', { name: 'Unlock workspace' }).click();
   await expect(lock).toHaveCount(0, { timeout: 20_000 });
   await expectPanelStatusMessage(page, /Encrypted blob storage unlocked with blob:[a-f0-9-]+\./u);
@@ -453,7 +455,7 @@ test('settings utilities persist through rerenders and pCloud remains a mocked m
     await expect(page.locator('.image-trail-panel__cloud-provider')).toContainText('api.pcloud.com');
     await expect(page.locator('.image-trail-panel__cloud-provider')).not.toContainText('e2e-pcloud-token');
 
-    await page.getByLabel('Cloud backup password').fill(backupPassword);
+    await fillPanelPassword(page, 'Cloud backup password', backupPassword);
     await page.getByRole('button', { name: 'Back up now' }).click();
     const cloudProvider = page.locator('.image-trail-panel__cloud-provider');
     await expect(cloudProvider).toContainText(/Uploaded and verified .*\.image-trail-encrypted\.json/u);
@@ -475,7 +477,7 @@ test('settings utilities persist through rerenders and pCloud remains a mocked m
 
     await page.getByRole('button', { name: 'Choose restore file' }).click();
     await expect(page.locator('.image-trail-panel__cloud-provider')).toContainText('Found 1 encrypted pCloud backup.');
-    await page.getByLabel('Cloud backup password').fill(backupPassword);
+    await fillPanelPassword(page, 'Cloud backup password', backupPassword);
     await page.locator('.image-trail-panel__cloud-restore-row').click();
     await expect(cloudProvider.locator('.image-trail-panel__restore-preview')).toContainText('Bookmarks');
     await cloudProvider.getByRole('button', { name: 'Cancel' }).click();
