@@ -13,7 +13,7 @@ ships in the exact upload package.
 
 | Dashboard field   | Submission value                                                                                                                           |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name              | Image Trail by True Line AI LLC                                                                                                            |
+| Name              | Image Trail                                                                                                                                |
 | Summary           | Turn image URL patterns into navigable trails, durable galleries, encrypted captures, and recoverable backups.                             |
 | Category          | Photos                                                                                                                                     |
 | Language          | English                                                                                                                                    |
@@ -22,6 +22,12 @@ ships in the exact upload package.
 | Support           | https://github.com/true-line/image-trail/issues                                                                                            |
 | Privacy policy    | `docs/privacy-and-permissions-review.md` (canonical source; publish a hosted copy of this document as the live CWS URL at submission time) |
 | Promotional video | Not supplied. There is no audited promotional video for v0.26.6.                                                                           |
+
+The store title comes from the manifest `name` of the uploaded package. The audited
+v0.26.6 package declares `Image Trail`, so that is the listing name for now. The
+manifest on `main` declares `Image Trail by True Line AI LLC`; change the Name row and
+the reviewer step only when a package containing that manifest is audited and recorded
+below.
 
 The official listing guidance was re-audited on 2026-08-07. It describes a
 YouTube promotional video among the listing information to provide, while the
@@ -107,7 +113,7 @@ The full public policy is [Privacy And Permissions Review](../privacy-and-permis
 
 ## Reviewer instructions (no private credentials)
 
-1. Install the supplied ZIP as an unpacked extension and pin **Image Trail by True Line AI LLC**.
+1. Install the supplied ZIP as an unpacked extension and pin **Image Trail**.
 2. Open a public page containing images, then invoke the toolbar action. The
    Image Trail panel should appear only after this gesture.
 3. On a page with several images, use **Set host image** and choose one image.
