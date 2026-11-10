@@ -24,6 +24,7 @@ import { MoveAcknowledgementReconciler, moveAcknowledgementPath } from '../exten
 import { isMoveRecordEnvelope, type MoveRecordEnvelope } from '../extension/src/data/interop/move-journal-records.js';
 import { MoveOutboxPublisher } from '../extension/src/data/interop/move-outbox-publisher.js';
 import { finalizeInteropMoveSource } from '../extension/src/data/interop/move-source-finalizer.js';
+import { InteropRecordExportStore } from '../extension/src/data/interop/record-export.js';
 import { importInteropPairingBundle } from '../extension/src/data/interop/pairing-import.js';
 import { openInteropMessage, sealInteropMessage } from '../extension/src/data/interop/sealed-message.js';
 import { SecureMoveOutboxRepository } from '../extension/src/data/interop/secure-move-outbox-repository.js';
@@ -340,6 +341,48 @@ test('an original captured after review stops finalization and the original surv
   assert.equal(progress.counts.finalized, 0);
   assert.ok(await new BookmarksRepository(db).getEncrypted('bookmark-1'));
   assert.ok(await new BlobsRepository(db).get('late-blob'));
+});
+
+test('an edit that lands while the review is assembled is not adopted into the fingerprint', async (t) => {
+  const opened = await openImageTrailDb(new IDBFactory());
+  assert.ok(opened.db);
+  const db = opened.db;
+  t.after(() => db.close());
+  const bookmarks = new BookmarksRepository(db);
+  const key = await ensureDurableBookmarkKey(new KeysRepository(db));
+  const stamp = '2026-07-17T12:02:00.000Z';
+  await bookmarks.sealAndPut(
+    'bookmark-1',
+    { url: 'https://example.test/image.jpg', title: 'Source record', bookmarkedAt: stamp },
+    key.key,
+    key.reference,
+    stamp,
+  );
+
+  // The review re-seals the row to record custody. Let a user edit land right after that write,
+  // before the review finishes: the exported record is then older than the stored row.
+  const sealAndPut = BookmarksRepository.prototype.sealAndPut;
+  let editAfterNextWrite = true;
+  BookmarksRepository.prototype.sealAndPut = async function (this: BookmarksRepository, ...args: Parameters<typeof sealAndPut>) {
+    const written = await sealAndPut.apply(this, args);
+    if (editAfterNextWrite) {
+      editAfterNextWrite = false;
+      await resealKeepingTimestamp(db, { title: 'Edited during review' });
+    }
+    return written;
+  } as typeof sealAndPut;
+  t.after(() => (BookmarksRepository.prototype.sealAndPut = sealAndPut));
+
+  const review = await new InteropRecordExportStore(db, { now: () => stamp }).review(['bookmark-1'], null, { includeOriginalBytes: false });
+  const [reviewed] = review.records;
+  assert.ok(reviewed);
+  assert.equal(editAfterNextWrite, false, 'the review must have re-sealed the row for this test to mean anything');
+
+  await assert.rejects(
+    finalizeInteropMoveSource(db, 'bookmark-1', reviewed.sourceUpdatedAt, reviewed.sourceFingerprint),
+    /source changed after review/u,
+  );
+  assert.ok(await bookmarks.getEncrypted('bookmark-1'));
 });
 
 test('a review recorded without a fingerprint never deletes the source', async (t) => {
