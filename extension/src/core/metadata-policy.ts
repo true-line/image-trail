@@ -82,3 +82,7 @@ export function hashSearchableUrl(url: string): Promise<string> {
 export async function bookmarkSearchIndexKey(url: string, policy: SearchableMetadataPolicy): Promise<string> {
   return isSearchablePlaintext('urlDerived', policy) ? url : hashSearchableUrl(url);
 }
+
+/** What the `encrypted` searchable-metadata mode does and does not protect. Shown on every Settings surface. */
+export const ENCRYPTED_METADATA_MODE_DISCLOSURE =
+  'Encrypted seals them with a key kept in this browser profile, so they are not stored as readable text, but they are not protected by your encryption password: someone with access to this profile can recover them, and the URL lookup hash can confirm an address they already know. Only private pins and stored originals are password-protected.';
