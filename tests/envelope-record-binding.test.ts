@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as v from 'valibot';
 
 import { assertEnvelopeBoundTo, openValidatedJsonEnvelope, sealJsonEnvelope } from '../extension/src/data/crypto/envelope.js';
+import { recallEncryptedRecord } from '../extension/src/data/import-export/recall.js';
 import { encryptedEnvelopeSchema } from '../extension/src/data/crypto/types.schema.js';
 
 const payloadSchema = v.object({ url: v.string() });
@@ -53,4 +54,14 @@ test('schema hydration keeps the bound id and the authenticated byte order', asy
     assert.deepEqual(hydrated.authenticatedMetadata, envelope.authenticatedMetadata);
     assert.deepEqual(await openValidatedJsonEnvelope(hydrated, key, payloadSchema, 'row-a'), { url: 'https://example.test/a.jpg' });
   }
+});
+
+test('recall refuses an envelope presented under a different record id', async () => {
+  const key = await aesKey();
+  const envelope = await seal(key, 'row-a');
+  const own = await recallEncryptedRecord({ uuid: 'row-a', recordType: 'bookmark', envelope, key });
+  const other = await recallEncryptedRecord({ uuid: 'row-b', recordType: 'bookmark', envelope, key });
+  assert.equal(own.status.ok, true);
+  assert.equal(other.status.ok, false);
+  assert.equal(other.entry, undefined);
 });

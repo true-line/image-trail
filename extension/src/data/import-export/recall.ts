@@ -1,4 +1,4 @@
-import { openJsonEnvelope } from '../crypto/envelope.js';
+import { assertEnvelopeBoundTo, openJsonEnvelope } from '../crypto/envelope.js';
 import type { EncryptedEnvelope, RecordEnvelopeMetadata } from '../crypto/types.js';
 import type { DurableBookmarkPayloadV1, DurableHistoryPayloadV1, RecoverableDataStatus } from '../types.js';
 
@@ -32,6 +32,7 @@ export interface RecallResult {
 
 export async function recallEncryptedRecord<T extends RecallRecordType>(input: RecallInput<T>): Promise<RecallResult> {
   try {
+    assertEnvelopeBoundTo(input.envelope, input.uuid);
     if (input.recordType === 'history') {
       const payload = await openJsonEnvelope<DurableHistoryPayloadV1>(input.envelope, input.key);
       return {
