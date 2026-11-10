@@ -146,10 +146,9 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
 
   async save(record: ImageDisplayRecord, options: BookmarkSaveOptions = {}): Promise<ImageDisplayRecord> {
     const context = await this.openContext();
+    if (!context) throw new Error('Bookmark storage is unavailable.');
     const importedDataUrl = record.url.startsWith('data:image/');
     const bookmark = createDisplayRecord({ ...record, id: importedDataUrl ? record.id : record.url, source: 'bookmark' });
-    if (!context) return bookmark;
-
     return this.saveWithContext(context, bookmark, options);
   }
 
@@ -446,14 +445,15 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
   }
 
   async close(): Promise<void> {
-    const context = await this.ready;
-    context?.db.close();
+    (await this.ready?.catch(() => null))?.db.close();
     this.ready = null;
   }
 
-  private openContext(): Promise<BookmarkContext | null> {
-    this.ready ??= this.createContext();
-    return this.ready;
+  private async openContext(): Promise<BookmarkContext | null> {
+    const opening = (this.ready ??= this.createContext());
+    const context = await opening.catch(() => null);
+    if (!context && this.ready === opening) this.ready = null; // a failed open is retried, not cached
+    return context;
   }
 
   private async createContext(): Promise<BookmarkContext | null> {
