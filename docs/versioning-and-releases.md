@@ -199,6 +199,21 @@ commit must be on `main`. Otherwise the workflow stops before publishing.
 Rerunning a release refreshes the ZIP and checksum assets with `--clobber`; it
 does not rewrite the release notes.
 
+### Release credential custody
+
+The App credentials (`CHORES_DUMB_CLIENT_ID`, `CHORES_DUMB_PRIVATE_KEY`) are read
+through protected environments, not from an arbitrary branch:
+
+- `release` (Release job): accepts only `main` and `v*.*.*` tags and waits for a
+  maintainer's approval. Every release run pauses for that approval.
+- `version-cut` (version PR and tag jobs): accepts only `main`, no approval.
+- The `protect-release-tags` ruleset lets only repository admins and the release
+  App create, move, or delete `v*` tags.
+
+Store the two secrets, and `PCLOUD_CLIENT_ID` for `release`, as environment
+secrets. A repository-level copy would still be readable by a workflow run from
+any branch, so do not keep one.
+
 ### Release credential timing
 
 The Release job installs dependencies, runs the hardened E2E smoke test, and

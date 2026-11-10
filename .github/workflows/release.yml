@@ -59,6 +59,10 @@ jobs:
     if: needs.policy.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Release credentials live in this protected environment: it accepts only
+    # main and v*.*.* tags and waits for a maintainer's approval, so a
+    # dispatch from another branch cannot reach them.
+    environment: release
     permissions:
       actions: read # Required to prove exact-commit complete-suite evidence.
       contents: read # Required only by checkout; writes use the App token.
