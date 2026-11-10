@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { isOwnExtensionSender, withSenderCheckedReferrer } from './message-sender.js';
+import { isOwnExtensionSender, publicPageTargetsPrivateNetwork, withSenderCheckedReferrer } from './message-sender.js';
 import { createUnknownMessageResponse, type ExtensionRequest, type ExtensionResponse } from './messages.js';
 
 /**
@@ -89,7 +89,8 @@ export function dispatchRequest(
 
 /**
  * Runtime-listener entry point: ignores messages that did not come from this extension, and
- * strips a referrer a content script is not entitled to claim, before dispatching.
+ * strips a referrer a content script is not entitled to claim, and refuses a public page's
+ * request for a private-network address, before dispatching.
  */
 export function dispatchRequestFromSender(
   registry: Partial<Record<ExtensionRequest['type'], AnyMessageDef>>,
@@ -99,5 +100,11 @@ export function dispatchRequestFromSender(
   runtimeId: string,
 ): boolean {
   if (!isOwnExtensionSender(sender, runtimeId)) return false;
+  const entry = registry[message.type];
+  if (entry && publicPageTargetsPrivateNetwork(message, sender, runtimeId)) {
+    console.warn(`Image Trail refused a ${message.type} request from a public page for a private-network address.`);
+    respondWithFallback(entry, message, sendResponse);
+    return true;
+  }
   return dispatchRequest(registry, withSenderCheckedReferrer(message, sender, runtimeId), sendResponse, { sender });
 }
