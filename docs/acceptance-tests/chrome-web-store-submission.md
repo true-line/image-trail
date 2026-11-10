@@ -18,7 +18,7 @@ ships in the exact upload package.
 | Category          | Photos                                                                                                                                     |
 | Language          | English                                                                                                                                    |
 | Mature content    | No                                                                                                                                         |
-| Homepage          | https://github.com/true-line/image-trail                                                                                                   |
+| Homepage          | https://true-line.ai                                                                                                                       |
 | Support           | https://github.com/true-line/image-trail/issues                                                                                            |
 | Privacy policy    | `docs/privacy-and-permissions-review.md` (canonical source; publish a hosted copy of this document as the live CWS URL at submission time) |
 | Promotional video | Not supplied. There is no audited promotional video for v0.26.6.                                                                           |

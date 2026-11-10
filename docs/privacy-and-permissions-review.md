@@ -136,6 +136,7 @@ Suggested disclosure:
 
 ## Contact and public links
 
-- Project: https://github.com/qwts/image-trail
-- Support and privacy requests: https://github.com/qwts/image-trail/issues
+- Publisher: True Line AI LLC, https://true-line.ai
+- Project: https://github.com/true-line/image-trail
+- Support and privacy requests: https://github.com/true-line/image-trail/issues
 - Chrome Web Store submission checklist: [Chrome Web Store Submission](acceptance-tests/chrome-web-store-submission.md)
