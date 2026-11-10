@@ -32,6 +32,20 @@ Verify that encrypted captured originals have a portable recovery path before en
 - Importing with the wrong backup password fails closed and does not write a key.
 - Re-importing an existing key reference is idempotent or reports that the key is already imported without duplicating it.
 
+## Manual check: another device's key does not lock out local data
+
+Restoring a key backup from a second profile must not change which password unlocks this profile's own data.
+
+1. In profile A, create the encrypted originals key with password `alpha`, pin an image privately, and capture one original.
+2. In a fresh profile B, create the encrypted originals key with password `bravo` (after step 1, so B's key is newer) and export a key backup.
+3. In profile A, import profile B's key backup with its backup password.
+4. Lock encrypted storage, then unlock it with `alpha`.
+5. Confirm A's private pin shows its details and A's captured original previews or downloads.
+6. Lock again, unlock with a password neither key uses, and confirm the panel reports the password did not unlock and stays locked.
+7. Repeat steps 1-5 with both profiles using the same password, and confirm A's private pin and original still open and a new capture in A previews afterwards.
+
+Expected: A's own password unlocks A's key whether or not B's newer key shares that password, and A's key stays the one new captures are sealed with. Records sealed with B's key are not readable while A's key is unlocked; unlocking with B's password, when it differs, opens B's key instead.
+
 ## Manual check: exports stay out of the host page
 
 Automated tests run against a DOM double, so confirm this once per release in a packaged Chromium build.
