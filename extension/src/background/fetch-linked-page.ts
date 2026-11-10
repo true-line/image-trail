@@ -1,3 +1,4 @@
+import { redirectEntersPrivateNetwork } from './message-sender.js';
 import { credentialsForImageRequest } from './fetch-image.js';
 import type { FetchLinkedPageMessage, FetchLinkedPageResultMessage } from './messages.js';
 import { hasOriginPermission } from './permissions.js';
@@ -56,6 +57,12 @@ export async function fetchLinkedPage(
   }
 }
 
+const PRIVATE_REDIRECT_BLOCKED: FetchLinkedPageResultMessage['payload'] = {
+  ok: false,
+  reason: 'network-error',
+  message: 'Linked page redirect into a private network was blocked.',
+};
+
 async function fetchWithPrivateRedirects(input: {
   readonly url: URL;
   readonly referrer: string;
@@ -91,7 +98,9 @@ async function fetchWithPrivateRedirects(input: {
           result: { ok: false, reason: 'network-error', message: 'Linked page redirect could not be inspected safely.' },
         };
       }
-      return { ok: true, response, finalUrl: response.url || current.href };
+      const finalUrl = response.url || current.href;
+      if (redirectEntersPrivateNetwork(input.url.href, finalUrl)) return { ok: false, result: PRIVATE_REDIRECT_BLOCKED };
+      return { ok: true, response, finalUrl };
     }
     if (redirectCount === MAX_LINKED_PAGE_REDIRECTS) {
       return {
@@ -106,6 +115,7 @@ async function fetchWithPrivateRedirects(input: {
         result: { ok: false, reason: 'unsupported-url', message: 'Linked page redirect must use HTTP or HTTPS.' },
       };
     }
+    if (redirectEntersPrivateNetwork(input.url.href, next.href)) return { ok: false, result: PRIVATE_REDIRECT_BLOCKED };
     current = next;
   }
   return { ok: false, result: { ok: false, reason: 'network-error', message: 'Linked page fetch failed.' } };

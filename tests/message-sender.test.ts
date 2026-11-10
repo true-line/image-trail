@@ -6,6 +6,7 @@ import {
   isOwnExtensionSender,
   isPrivateNetworkHost,
   publicPageTargetsPrivateNetwork,
+  redirectEntersPrivateNetwork,
   withSenderCheckedReferrer,
 } from '../extension/src/background/message-sender.js';
 
@@ -71,6 +72,25 @@ test('private-network hosts are recognised', () => {
   for (const host of ['example.com', '8.8.8.8', '172.32.0.1', '11.0.0.1', '[2606:4700::1111]', 'local.example.com']) {
     assert.equal(isPrivateNetworkHost(host), false, host);
   }
+});
+
+test('private-network detection survives URL canonicalisation of IPv4-mapped IPv6', () => {
+  for (const url of [
+    'http://[::ffff:10.0.0.1]/',
+    'http://[::ffff:127.0.0.1]/',
+    'http://[::ffff:c0a8:10a]/',
+    'http://[0:0:0:0:0:ffff:a9fe:a9fe]/',
+  ]) {
+    assert.equal(isPrivateNetworkHost(new URL(url).hostname), true, url);
+  }
+  assert.equal(isPrivateNetworkHost(new URL('http://[::ffff:8.8.8.8]/').hostname), false);
+});
+
+test('a redirect from a public address into a private network is detected', () => {
+  assert.equal(redirectEntersPrivateNetwork('https://cdn.test/a.jpg', 'http://192.168.1.10/a.jpg'), true);
+  assert.equal(redirectEntersPrivateNetwork('https://cdn.test/a.jpg', 'http://[::ffff:10.0.0.1]/a.jpg'), true);
+  assert.equal(redirectEntersPrivateNetwork('https://cdn.test/a.jpg', 'https://img.cdn.test/a.jpg'), false);
+  assert.equal(redirectEntersPrivateNetwork('http://192.168.1.10/a', 'http://192.168.1.11/a'), false);
 });
 
 test('a public page cannot request a private-network address', () => {

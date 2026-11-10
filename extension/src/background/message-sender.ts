@@ -53,6 +53,17 @@ export function withSenderCheckedReferrer<T extends { readonly payload?: unknown
 
 const PRIVATE_IPV4 = [/^127\./u, /^10\./u, /^192\.168\./u, /^169\.254\./u, /^172\.(1[6-9]|2\d|3[01])\./u, /^0\./u];
 
+/** The IPv4 address inside `::ffff:a.b.c.d`, including the hex form (`::ffff:a00:1`) URL parsing produces. */
+function mappedIpv4(host: string): string | null {
+  const dotted = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(host);
+  if (dotted?.[1]) return dotted[1];
+  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/u.exec(host);
+  if (!hex?.[1] || !hex[2]) return null;
+  const high = parseInt(hex[1], 16);
+  const low = parseInt(hex[2], 16);
+  return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
+}
+
 /** Loopback, link-local, and private-range hosts, plus the names that conventionally resolve to them. */
 export function isPrivateNetworkHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/gu, '');
@@ -60,8 +71,8 @@ export function isPrivateNetworkHost(hostname: string): boolean {
   if (/^\d+\.\d+\.\d+\.\d+$/u.test(host)) return PRIVATE_IPV4.some((range) => range.test(host));
   if (!host.includes(':')) return false;
   if (host === '::1' || host === '::') return true;
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(host);
-  if (mapped?.[1]) return PRIVATE_IPV4.some((range) => range.test(mapped[1] ?? ''));
+  const mapped = mappedIpv4(host);
+  if (mapped) return PRIVATE_IPV4.some((range) => range.test(mapped));
   return /^f[cd]/u.test(host) || /^fe[89ab]/u.test(host);
 }
 
@@ -73,6 +84,15 @@ function privateHttpTarget(url: unknown): URL | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * True when a request that started at a public address ended up, through a redirect, at a
+ * private-network address. The sender check only sees the first URL, so every fetch that
+ * follows redirects applies this to each hop it can observe.
+ */
+export function redirectEntersPrivateNetwork(requestedUrl: string, reachedUrl: string): boolean {
+  return privateHttpTarget(requestedUrl) === null && privateHttpTarget(reachedUrl) !== null;
 }
 
 /**

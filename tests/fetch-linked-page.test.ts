@@ -153,3 +153,24 @@ test('linked-page fetch rejects non-HTTP targets before permission or network ac
   assert.equal(permissionChecked, false);
   assert.equal(fetched, false);
 });
+
+test('linked-page fetch stops a redirect from a public page into a private network', async () => {
+  const fetched: string[] = [];
+  const result = await fetchLinkedPage(
+    createFetchLinkedPageMessage('https://target.example.test/page', 'https://source.example.test/gallery', 1024, 2000),
+    {
+      hasPermission: async () => true,
+      fetchImpl: async (input) => {
+        fetched.push(String(input));
+        return new Response(null, { status: 302, headers: { location: 'http://192.168.1.10/admin' } });
+      },
+    },
+  );
+
+  assert.deepEqual(fetched, ['https://target.example.test/page']);
+  assert.deepEqual(result, {
+    ok: false,
+    reason: 'network-error',
+    message: 'Linked page redirect into a private network was blocked.',
+  });
+});
