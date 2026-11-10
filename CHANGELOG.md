@@ -1,5 +1,11 @@
 # image-trail
 
+## 0.27.6
+
+### Patch Changes
+
+- cdb7e93: pCloud API calls no longer send the browser's pCloud web cookies.
+
 ## 0.27.5
 
 ### Patch Changes
