@@ -141,7 +141,7 @@ export const recallRecordsRequestSchema = v.object({ ids: stringArraySchema });
 
 export const saveBookmarkRequestSchema = v.object({
   record: imageDisplayRecordSchema,
-  options: v.optional(v.object({ clearStoredOriginal: v.optional(v.boolean()) })),
+  options: v.optional(v.object({ clearStoredOriginal: v.optional(v.boolean()), requireEncrypted: v.optional(v.boolean()) })),
 });
 
 export const removeBookmarkRequestSchema = v.object({ record: imageDisplayRecordSchema });

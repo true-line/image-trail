@@ -44,6 +44,10 @@ export function bookmarkRecordToExportEntry(record: ImageDisplayRecord): {
       capturedAt: record.capturedAt,
       sourceCompatibility: record.source === 'favorites' ? 'favorites' : undefined,
       storedOriginal: record.storedOriginal,
+      // Carried so restore knows the pin was private and refuses to save it as plaintext.
+      protectedPin: record.protectedPin
+        ? { schemaVersion: 1, queueUpdatedAt: record.queueUpdatedAt ?? record.timestamp, ...record.protectedPin }
+        : undefined,
     },
   };
 }

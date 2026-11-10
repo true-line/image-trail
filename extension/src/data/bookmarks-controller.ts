@@ -1,6 +1,6 @@
 import type { ImageDisplayRecord } from '../core/display-records.js';
 import { createDisplayRecord } from '../core/display-records.js';
-import type { BookmarkSaveOptions } from '../core/bookmark-save-options.js';
+import { PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE, type BookmarkSaveOptions } from '../core/bookmark-save-options.js';
 import type { StorageUsageSummary } from '../core/image/capture-result.js';
 import {
   bookmarkSearchIndexKey,
@@ -166,30 +166,30 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     }
     const activeBlobKey = (await this.options.getActiveBlobKey?.()) ?? null;
     const preference = (await this.options.getPinSaveStoragePreference?.()) ?? DEFAULT_LOCAL_SETTINGS.pinSaveStoragePreference;
-    if (preference === 'plaintext') {
-      if (activeBlobKey && (await this.hasProtectedPinForUrlInContext(context, bookmark.url))) {
-        return { ...(await this.saveProtected(context, bookmark, activeBlobKey, options)), pinSaveStorage: { destination: 'encrypted' } };
-      }
-      return this.savePlain(context, bookmark, { destination: 'plaintext', reason: 'setting' }, options);
+    const protectedPin = await context.encryptedPins.getByUrlHash(await hashSearchableUrl(bookmark.url));
+    const keepPrivate = options.requireEncrypted === true || !!protectedPin;
+    if (keepPrivate && !activeBlobKey) {
+      // A pin that is, or must be, private never gets a plaintext copy while the key is away.
+      if (!protectedPin) throw new BookmarkPersistenceError(PRIVATE_PIN_NEEDS_UNLOCK_MESSAGE, false);
+      return this.lockedPrivatePin(context, protectedPin.plainPinId, bookmark);
     }
-
-    if (activeBlobKey) {
+    if (activeBlobKey && (keepPrivate || preference !== 'plaintext')) {
       try {
         return { ...(await this.saveProtected(context, bookmark, activeBlobKey, options)), pinSaveStorage: { destination: 'encrypted' } };
-      } catch {
+      } catch (error) {
+        if (keepPrivate) throw error;
         return this.savePlain(context, bookmark, { destination: 'plaintext', reason: 'failed' }, options);
       }
     }
+    const reason = preference === 'plaintext' ? 'setting' : this.options.getActiveBlobKey ? 'locked' : 'unavailable';
+    return this.savePlain(context, bookmark, { destination: 'plaintext', reason }, options);
+  }
 
-    return this.savePlain(
-      context,
-      bookmark,
-      {
-        destination: 'plaintext',
-        reason: this.options.getActiveBlobKey ? 'locked' : 'unavailable',
-      },
-      options,
-    );
+  private async lockedPrivatePin(context: BookmarkContext, plainPinId: string, bookmark: ImageDisplayRecord): Promise<ImageDisplayRecord> {
+    const stub = await context.repository.getEncrypted(plainPinId);
+    const payload = stub ? await context.repository.openRecord(stub, context.bookmarkKey.key).catch(() => null) : null;
+    const stored = stub && payload ? toDisplayRecord(stub.uuid, payload, stub.queueUpdatedAt) : { ...bookmark, id: plainPinId };
+    return { ...stored, pinSaveStorage: { destination: 'encrypted' }, privacyStatus: 'locked' };
   }
 
   async saveResult(record: ImageDisplayRecord, options?: BookmarkSaveOptions) {
