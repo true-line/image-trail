@@ -58,6 +58,7 @@
     "service_worker": "src/background/service-worker.js",
     "type": "module"
   },
+  "incognito": "split",
   "permissions": ["activeTab", "scripting", "downloads", "identity", "storage", "declarativeNetRequestWithHostAccess"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "web_accessible_resources": [

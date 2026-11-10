@@ -127,6 +127,10 @@ Design review should start from Storybook and the canonical acceptance pages:
 - Do not show plaintext protected metadata while encrypted storage is locked.
 - Do not suggest host-page storage for extension-owned state.
 - Do not broaden permissions for visual convenience.
+- Incognito windows run a separate extension instance (`"incognito": "split"`):
+  Recents, image caches, the unlocked key, and stored records are never shared
+  between incognito and regular windows, and incognito data is discarded when
+  the incognito session ends.
 - Do not imply automatic capture of every visible image. Capture is explicit.
 - Do not imply pCloud receives plaintext Image Trail data; backups are
   password-encrypted before upload.
