@@ -1,5 +1,11 @@
 # image-trail
 
+## 0.27.8
+
+### Patch Changes
+
+- 2b3b937: Shorten the extension name to Image Trail. True Line AI LLC remains the publisher and copyright holder; the long form "Image Trail by True Line AI LLC" no longer appears as the product name.
+
 ## 0.27.7
 
 ### Patch Changes
