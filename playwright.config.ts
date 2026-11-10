@@ -4,9 +4,9 @@ export default defineConfig({
   testDir: './tests/e2e',
   globalSetup: './tests/e2e/global-setup.ts',
   // Files are the unit of parallelism: fullyParallel stays false so tests within a
-  // spec run serially (each spec relies on its own ordered, shared extension
-  // context), but distinct spec files run concurrently across workers, each in its
-  // own isolated persistent profile. The extension is built once in global-setup.
+  // spec run serially, while distinct spec files run concurrently across workers.
+  // Every test opens its own fresh persistent profile, so no test depends on state
+  // left by another. The extension is built once in global-setup.
   fullyParallel: false,
   workers: process.env.CI ? 3 : undefined,
   timeout: 30_000,

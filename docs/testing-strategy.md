@@ -98,9 +98,11 @@ The Playwright suite is parallelized at the **spec-file** level (PR #380):
   it — which is exactly why the suite couldn't be parallelized: concurrent
   `npm run build` runs each start with `rm -rf dist` and would clobber each other.)
 - `fullyParallel: false` with `workers: 3` on CI: tests **within** a spec run
-  serially and in order — each spec shares one worker-scoped persistent profile and
-  depends on that order — but **distinct spec files run concurrently**, each in its
-  own isolated `mkdtemp` profile.
+  serially, and **distinct spec files run concurrently**.
+- Every test opens its own fresh `mkdtemp` persistent profile. No test may rely on
+  state left by an earlier test or spec; a test that needs the encrypted-originals
+  key or a locked workspace sets that up itself (`ensureBlobKeyCreated`,
+  `ensureBlobKeyUnavailable` in `tests/e2e/fixtures.ts`).
 - Result: the E2E CI step dropped from ~3m21s to ~46s.
 
 **The ceiling:** because parallelism is file-level, wall-clock ≈ the **slowest

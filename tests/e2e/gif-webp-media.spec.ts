@@ -5,6 +5,7 @@ import type { Page, Worker } from '@playwright/test';
 import {
   applyUrlInEditor,
   clearDownloadRequestLog,
+  ensureBlobKeyCreated,
   expect,
   expectPanelOpen,
   expectPanelStatusMessage,
@@ -17,7 +18,6 @@ import {
   readDownloadRequestLog,
   test,
   togglePanelFromExtensionAction,
-  fillPanelPassword,
 } from './fixtures.js';
 import { pinCurrentImage } from './current-image-actions.js';
 
@@ -114,11 +114,7 @@ test('GIF/WebP capture keeps exact originals, static posters, safe failures, and
 });
 
 async function setupEncryptedOriginals(page: Page): Promise<void> {
-  await openSettingsGroup(page, 'Encrypted originals');
-  await fillPanelPassword(page, 'New encrypted originals password', 'gif-webp-original-password');
-  await page.getByRole('button', { name: 'Create first key' }).click();
-  await expect(page.locator('.image-trail-panel__encryption-badge')).toHaveText('Unlocked');
-  await page.getByRole('button', { name: 'Close settings' }).click();
+  await ensureBlobKeyCreated(page, 'gif-webp-original-password');
 }
 
 async function captureMalformedFixture(
