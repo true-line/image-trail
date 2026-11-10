@@ -20,7 +20,7 @@ import {
   toRelationshipPayload,
 } from './bookmark-record-mappers.js';
 import type { ActiveBlobKey } from './crypto/blob-keyring.js';
-import { removeBookmarkRows, withBookmarkRowWriteLock } from './bookmark-row-writes.js';
+import { moveBookmarkRowsToFront, removeBookmarkRows, withBookmarkRowWriteLock } from './bookmark-row-writes.js';
 import { openImageTrailDb } from './db.js';
 import { ensureDurableBookmarkKey, type DurableBookmarkKeyContext } from './durable-bookmark-key.js';
 import { DEFAULT_LOCAL_SETTINGS } from './local-settings.js';
@@ -336,23 +336,9 @@ export class IndexedDbBookmarkStore implements BookmarkStore {
     const baseTime = Date.now();
     // Queue pages read queueUpdatedAt newest-first, so earlier selected IDs get later timestamps.
     const moves = uniqueIds.map((uuid, index) => ({ uuid, queueUpdatedAt: new Date(baseTime + uniqueIds.length - index).toISOString() }));
-    const updated = await withBookmarkRowWriteLock(() => context.repository.updateQueueUpdatedAt(moves));
+    const updated = await moveBookmarkRowsToFront(context, moves, Boolean(this.options.getActiveBlobKey));
     this.invalidateMergedRecordsCache();
-    if (this.options.getActiveBlobKey) {
-      const protectedUpdates: Array<{ readonly id: string; readonly queueUpdatedAt: string }> = [];
-      for (const update of updated) {
-        try {
-          const payload = await context.repository.openRecord(update, context.bookmarkKey.key);
-          if (payload.protectedPin?.encryptedPinId) {
-            protectedUpdates.push({ id: payload.protectedPin.encryptedPinId, queueUpdatedAt: update.queueUpdatedAt });
-          }
-        } catch {
-          // Undecryptable relationship rows cannot be moved in the protected store.
-        }
-      }
-      await withBookmarkRowWriteLock(() => context.encryptedPins.updateQueueUpdatedAt(protectedUpdates));
-      return this.loadRecordsByIds(context, uniqueIds);
-    }
+    if (this.options.getActiveBlobKey) return this.loadRecordsByIds(context, uniqueIds);
     const records: ImageDisplayRecord[] = [];
     for (const record of updated) {
       try {

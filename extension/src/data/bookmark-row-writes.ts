@@ -31,6 +31,35 @@ interface BookmarkRowRemovalContext {
   readonly blobs: BlobsRepository;
 }
 
+/**
+ * Applies a Recall move to the relationship rows and, when `includeProtected`, to the encrypted-pin
+ * rows they link, as one locked operation: two overlapping moves cannot interleave their row updates
+ * and leave a pin's two rows with different queue positions.
+ */
+export function moveBookmarkRowsToFront(
+  context: Pick<BookmarkRowRemovalContext, 'repository' | 'bookmarkKey' | 'encryptedPins'>,
+  moves: readonly { readonly uuid: string; readonly queueUpdatedAt: string }[],
+  includeProtected: boolean,
+): Promise<Awaited<ReturnType<BookmarksRepository['updateQueueUpdatedAt']>>> {
+  return withBookmarkRowWriteLock(async () => {
+    const updated = await context.repository.updateQueueUpdatedAt(moves);
+    if (!includeProtected) return updated;
+    const protectedUpdates: Array<{ readonly id: string; readonly queueUpdatedAt: string }> = [];
+    for (const update of updated) {
+      try {
+        const payload = await context.repository.openRecord(update, context.bookmarkKey.key);
+        if (payload.protectedPin?.encryptedPinId) {
+          protectedUpdates.push({ id: payload.protectedPin.encryptedPinId, queueUpdatedAt: update.queueUpdatedAt });
+        }
+      } catch {
+        // Undecryptable relationship rows cannot be moved in the protected store.
+      }
+    }
+    await context.encryptedPins.updateQueueUpdatedAt(protectedUpdates);
+    return updated;
+  });
+}
+
 /** Removes each row and its linked protected storage under the row-write lock; returns how many rows existed. */
 export function removeBookmarkRows(context: BookmarkRowRemovalContext, ids: readonly string[]): Promise<number> {
   return withBookmarkRowWriteLock(async () => {

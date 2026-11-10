@@ -123,6 +123,61 @@ test('Recall during an in-flight protected save keeps the recalled record at the
   }
 });
 
+test('overlapping Recall moves of a protected pin keep its two rows at the same queue position (#946)', async () => {
+  await deleteImageTrailDb();
+  let active: ActiveBlobKey | null = null;
+  const store = new IndexedDbBookmarkStore({ getActiveBlobKey: () => active });
+  const url = 'https://example.test/serialized-protected-recall.jpg';
+  const applied: Array<{ readonly row: 'relationship' | 'pin'; readonly queueUpdatedAt: string }> = [];
+  const moveRelationships = BookmarksRepository.prototype.updateQueueUpdatedAt;
+  const movePins = EncryptedPinsRepository.prototype.updateQueueUpdatedAt;
+  const openRecord = BookmarksRepository.prototype.openRecord;
+  let slowNextOpen = false;
+  // The first move pauses between its relationship update and its pin update, where an unserialised second move would overtake it.
+  BookmarksRepository.prototype.openRecord = async function (this: BookmarksRepository, ...args: Parameters<typeof openRecord>) {
+    if (slowNextOpen) {
+      slowNextOpen = false;
+      await settle();
+    }
+    return openRecord.apply(this, args);
+  } as typeof openRecord;
+  BookmarksRepository.prototype.updateQueueUpdatedAt = async function (updates) {
+    const updated = await moveRelationships.call(this, updates);
+    for (const update of updates) applied.push({ row: 'relationship', queueUpdatedAt: update.queueUpdatedAt });
+    return updated;
+  };
+  EncryptedPinsRepository.prototype.updateQueueUpdatedAt = async function (updates) {
+    await movePins.call(this, updates);
+    for (const update of updates) applied.push({ row: 'pin', queueUpdatedAt: update.queueUpdatedAt });
+  };
+  try {
+    active = (
+      await createAndActivateWrappedBlobKey({
+        password: 'serialized-recall-password',
+        uuid: 'serialized-recall-key',
+        now: '2026-07-18T00:00:00.000Z',
+      })
+    ).active;
+    const saved = await store.save(pin(url, '2026-07-18T00:00:01.000Z'));
+
+    slowNextOpen = true;
+    const firstMove = store.moveToFront([saved.id]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await Promise.all([firstMove, store.moveToFront([saved.id])]);
+
+    assert.equal(applied.length, 4);
+    const last = (row: 'relationship' | 'pin') => applied.filter((entry) => entry.row === row).at(-1)?.queueUpdatedAt;
+    assert.equal(last('pin'), last('relationship'));
+  } finally {
+    BookmarksRepository.prototype.updateQueueUpdatedAt = moveRelationships;
+    BookmarksRepository.prototype.openRecord = openRecord;
+    EncryptedPinsRepository.prototype.updateQueueUpdatedAt = movePins;
+    await store.close();
+    active = null;
+    lockBlobKey();
+  }
+});
+
 test('overlapping saves for one record keep the captured original attached by either (#946)', async () => {
   await deleteImageTrailDb();
   const opened = await openImageTrailDb();
