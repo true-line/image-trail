@@ -11,23 +11,21 @@ ships in the exact upload package.
 
 ## Listing fields
 
-| Dashboard field   | Submission value                                                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name              | Image Trail                                                                                                                                |
-| Summary           | Turn image URL patterns into navigable trails, durable galleries, encrypted captures, and recoverable backups.                             |
-| Category          | Photos                                                                                                                                     |
-| Language          | English                                                                                                                                    |
-| Mature content    | No                                                                                                                                         |
-| Homepage          | https://true-line.ai                                                                                                                       |
-| Support           | https://github.com/true-line/image-trail/issues                                                                                            |
-| Privacy policy    | `docs/privacy-and-permissions-review.md` (canonical source; publish a hosted copy of this document as the live CWS URL at submission time) |
-| Promotional video | Not supplied. There is no audited promotional video for v0.26.6.                                                                           |
+| Dashboard field   | Submission value                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Name              | Image Trail by True Line AI LLC                                                                                              |
+| Summary           | Turn image URL patterns into navigable trails, durable galleries, encrypted captures, and recoverable backups.               |
+| Category          | Photos                                                                                                                       |
+| Language          | English                                                                                                                      |
+| Mature content    | No                                                                                                                           |
+| Homepage          | https://true-line.ai                                                                                                         |
+| Support           | https://github.com/true-line/image-trail/issues                                                                              |
+| Privacy policy    | https://www.true-line.ai/image-trail/privacy (hosted copy; `docs/privacy-and-permissions-review.md` is the canonical source) |
+| Promotional video | Not supplied. There is no audited promotional video for v0.26.6.                                                             |
 
-The store title comes from the manifest `name` of the uploaded package. The audited
-v0.26.6 package declares `Image Trail`, so that is the listing name for now. The
-manifest on `main` declares `Image Trail by True Line AI LLC`; change the Name row and
-the reviewer step only when a package containing that manifest is audited and recorded
-below.
+The store title and summary come from the manifest `name` and `description` of the
+uploaded package. The submitted v0.27.9 package declares
+`Image Trail by True Line AI LLC`; see [Submitted package](#submitted-package).
 
 The official listing guidance was re-audited on 2026-08-07. It describes a
 YouTube promotional video among the listing information to provide, while the
@@ -113,7 +111,7 @@ The full public policy is [Privacy And Permissions Review](../privacy-and-permis
 
 ## Reviewer instructions (no private credentials)
 
-1. Install the supplied ZIP as an unpacked extension and pin **Image Trail**.
+1. Install the supplied ZIP as an unpacked extension and pin **Image Trail by True Line AI LLC**.
 2. Open a public page containing images, then invoke the toolbar action. The
    Image Trail panel should appear only after this gesture.
 3. On a page with several images, use **Set host image** and choose one image.
@@ -155,6 +153,35 @@ The exact [CI](https://github.com/qwts/image-trail/actions/runs/31051521404),
 all succeeded. The repository evidence lock records the ZIP size, package and
 asset hashes, manifest snapshot, and workflow URLs in
 [`store-assets/submission-v0.26.6.json`](https://github.com/qwts/image-trail/blob/main/store-assets/submission-v0.26.6.json).
+
+## Submitted package
+
+On 2026-11-10 the owner submitted v0.27.9 for review as an update to the existing
+item `kopcjofaojfpgdoianeddagpenhijphi` (previously published as 0.26.1). The
+item ID is unchanged, so the registered pCloud redirect host still applies.
+
+| Field       | Value                                                                                                                                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit/tag  | [`230d2e0d953569f7a609da4fc62c937722e674eb`](https://github.com/true-line/image-trail/commit/230d2e0d953569f7a609da4fc62c937722e674eb) / [`v0.27.9`](https://github.com/true-line/image-trail/releases/tag/v0.27.9) |
+| ZIP         | `image-trail-v0.27.9.zip`, 675348 bytes                                                                                                                                                                             |
+| SHA-256     | `cc6b79d24c9192e5ec62cea63ca13e3a77411ea1ef50d6524809d17db296bee2` (matches the release `.sha256`)                                                                                                                  |
+| Manifest    | name `Image Trail by True Line AI LLC`, short name `Image Trail`, version `0.27.9`                                                                                                                                  |
+| Permissions | `activeTab`, `scripting`, `downloads`, `identity`, `storage`, `declarativeNetRequestWithHostAccess`; optional HTTP/HTTPS host access; no `nativeMessaging`                                                          |
+| Release run | https://github.com/true-line/image-trail/actions/runs/42911507276                                                                                                                                                   |
+
+The v0.26.6 evidence above remains the last package with a full repository
+evidence lock; v0.27.9 has no `store-assets/submission-*.json` record yet.
+
+Dashboard values that differ from the listing table:
+
+- **Category** is `Tools` on the live item, not `Photos`.
+- **Summary** is the manifest description, `Inspect and manage image URL
+transformations from an in-page panel.`
+- **Detailed description** was rewritten in plainer language for the listing.
+  It makes the same claims as the text above, adds a beta notice and a
+  key-backup reminder, and makes no Transfer & Sync, Google Drive, iCloud, or
+  Touch ID claim.
+- **Screenshots and tiles** were left as already uploaded on the item.
 
 ## Pre-submission checklist
 
