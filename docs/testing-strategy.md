@@ -32,6 +32,15 @@
 | 7b  | **Acceptance**    | Playwright specs: `image-utilities`, `recents-queue-recall`, `url-editor-parsed-fields`, `automation-governance` | Canonical end-to-end user flows                                                                               | Acceptance |
 | 7c  | Acceptance ledger | `check-e2e-coverage-map.mjs` over `coverage-map.json`                                                            | Governance: every flow declares its coverage                                                                  | Gate       |
 
+### DOM harness: stylesheet loading stays enabled
+
+`tests/dom/register.ts` registers happy-dom with `enableCSSFileLoading: true`. happy-dom 21 disables CSS file loading by
+default and dispatches `error` **synchronously** when a `<link rel="stylesheet">` connects. `PanelMount` treats a stylesheet
+`error` as a fail-open reveal, so with loading disabled the panel is already visible when `mount()` returns and no DOM test
+can observe the pre-reveal hidden state. Enabling loading resolves the harness's `data:` URLs locally and asynchronously, as
+a browser does, so tests drive the reveal by dispatching `load` themselves. Keep this setting when bumping happy-dom; the
+fail-open reveal itself stays covered by `tests/panel-mount.test.ts`.
+
 ### Smoke vs. acceptance vs. QA
 
 - **Smoke** — one Playwright spec (`extension-smoke.spec.ts`) answering "does it
